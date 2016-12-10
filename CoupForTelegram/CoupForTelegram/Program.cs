@@ -25,7 +25,9 @@ namespace CoupForTelegram
             }
         }
 
-        internal static List<Game> Games => new List<Game>();
+        internal static Random R = new Random();
+
+        internal static List<Game> Games = new List<Game>();
         
         static void Main(string[] args)
         {

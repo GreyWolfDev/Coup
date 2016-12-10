@@ -16,10 +16,23 @@ namespace CoupForTelegram
         public List<Card> Cards = CardHelper.GenerateCards();
         public List<Player> Players = new List<Player>();
         public GameState State = GameState.Joining;
-        public Game(int id, User u)
+        
+        /// <summary>
+        /// Is this game for friends only, or strangers
+        /// </summary>
+        public bool IsRandom = false;
+
+        /// <summary>
+        /// Is this game in PM or Group
+        /// </summary>
+        public bool IsGroup = false;
+
+        public Game(int id, User u, bool group, bool random)
         {
             GameId = id;
             AddPlayer(u);
+            IsGroup = group;
+            IsRandom = random;
         }
 
         public void AddPlayer(User u)
@@ -33,6 +46,14 @@ namespace CoupForTelegram
 
             if (!Players.Any(x => x.Id == u.Id))
                 Players.Add(new Player { Id = u.Id, Name = (u.FirstName + " " + u.LastName).Trim() });
+            else
+                return;
+
+            if (IsGroup)
+            {
+                Bot.SendAsync($"{u.FirstName} has joined the game", ChatId);
+            }
+
             if (Players.Count >= 6)
                 StartGame();
         }

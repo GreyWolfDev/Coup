@@ -51,7 +51,7 @@ namespace CoupForTelegram.Models
         public Captain()
         {
             Name = "Captain";
-            ActionsAllowed = new List<Action> { Action.Steal, Action.BlockSteal };
+            ActionsAllowed.AddRange(new[] { Action.Steal, Action.BlockSteal });
         }
     }
 
@@ -60,7 +60,7 @@ namespace CoupForTelegram.Models
         public Assassin()
         {
             Name = "Assassin";
-            ActionsAllowed = new List<Action> { Action.Assassinate };
+            ActionsAllowed.AddRange(new[] { Action.Assassinate });
         }
     }
 

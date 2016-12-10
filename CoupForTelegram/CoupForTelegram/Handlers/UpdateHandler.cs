@@ -1,21 +1,25 @@
-﻿using System;
+﻿using CoupForTelegram.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
-
+#pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
 namespace CoupForTelegram.Handlers
 {
     public static class UpdateHandler
     {
         internal static void HandleMessage(Message m)
         {
+            //start@coup2bot gameid
+           
             //get the command if any
             var cmd = m.Text.Split(' ')[0];
             cmd = cmd.Replace("@" + Bot.Me.Username, "").Replace("!", "").Replace("/", "");
             if (String.IsNullOrEmpty(cmd)) return;
+            Game g;
             //TODO - Move all of these to Commands using reflection
             //basic commands
             switch (cmd)
@@ -24,7 +28,36 @@ namespace CoupForTelegram.Handlers
                     
                     break;
                 case "start":
-                    
+                    //check for gameid
+                    try
+                    {
+                        var id = int.Parse(m.Text.Split(' ')[1]);
+                        var startgame = Program.Games.FirstOrDefault(x => x.GameId == id);
+                        if (startgame != null)
+                        {
+                            //check if group or PM
+                            if (m.Chat.Type == Telegram.Bot.Types.Enums.ChatType.Private)
+                            {
+                                //private chat - was it sent by the actual person?
+
+                            }
+                            else if (m.Chat.Type != Telegram.Bot.Types.Enums.ChatType.Channel)
+                            {
+                                startgame.ChatId = m.Chat.Id;
+                                Bot.SendAsync(m.From.FirstName + " wants to play coup.  Up to 6 players total can join.  Click below to join the game!", m.Chat.Id, customMenu:
+                                    new InlineKeyboardMarkup(new[]
+                                    {
+                                        new InlineKeyboardButton("Join", "join|" + id.ToString()),
+                                        new InlineKeyboardButton("Start", "start|" + id.ToString())
+                                    }));
+
+                            }
+                        }
+                    }
+                    catch
+                    {
+
+                    }
                     break;
                 case "join":
 
@@ -43,8 +76,8 @@ namespace CoupForTelegram.Handlers
                     break;
 
                 case "test":
-                    var g = new Game(432, m.From);
-                    g.AddPlayer(null);
+                    g = new Game(432, m.From, false, false);
+                        g.AddPlayer(null);
                     break;
             }
         }
@@ -53,19 +86,62 @@ namespace CoupForTelegram.Handlers
         {
             //https://telegram.me/coup2bot?startgroup=gameid
             //https://telegram.me/coup2bot?start=gameid
-
-            switch (c.Data)
+            var cmd = c.Data;
+            if (cmd.Contains("|"))
+                cmd = cmd.Split('|')[0];
+            Game g;
+            switch (cmd)
             {
                 case "spgf":
-                    Bot.ReplyToCallback(c, "Great! I've created a game for you.  Click below to invite your friends", replyMarkup: new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Invite") { SwitchInlineQuery = "randomid" } }));
+                    g = CreateGame(c.From);
+                    Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Share this link to invite friends: https://telegram.me/{Bot.Me.Username}?start={g.GameId}");
                     break;
                 case "spgs":
+                    //check for a game waiting for more players
+                    g = Program.Games.FirstOrDefault(x => x.State == GameState.Joining && x.Players.Count() < 6);
+                    if (g != null)
+                    {
+                        g.AddPlayer(c.From);
+                        Bot.ReplyToCallback(c, "You have joined a game!");
+                    }
+                    else
+                    {
+                        g = CreateGame(c.From, false, true);
+                        Bot.ReplyToCallback(c, $"There were no games available, so I have created a new game for you.  Please wait for others to join!");
+                    }
+                    Console.WriteLine($"{c.From.FirstName} has joined game: {g.GameId}");
                     break;
                 case "sgg":
+                    g = CreateGame(c.From, true);
+                    Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Click below to send the game to the group!", replyMarkup: new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Click here") { Url = $"https://telegram.me/{Bot.Me.Username}?startgroup={g.GameId}" } }));
+                    break;
+                case "join":
+                    var id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g != null)
+                    g.AddPlayer(c.From);
                     break;
             }
 
         }
+
+        private static Game CreateGame(User u, bool group = false, bool random = false)
+        {
+            var g = new Game(GenerateGameId(), u, group, random);
+            Program.Games.Add(g);
+            return g;
+        }
+
+        private static int GenerateGameId()
+        {
+            var result = 0;
+            do
+            {
+                result = Program.R.Next(10000, 10000000);
+            } while (Program.Games.Any(x => x.GameId == result));
+            return result;
+        }
+
 
         private static bool UserCanStartGame(int userid, long chatid)
         {
