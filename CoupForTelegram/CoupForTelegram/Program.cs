@@ -25,6 +25,7 @@ namespace CoupForTelegram
             }
         }
 
+        internal static List<Game> Games => new List<Game>();
         
         static void Main(string[] args)
         {
