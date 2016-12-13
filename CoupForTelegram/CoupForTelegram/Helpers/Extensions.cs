@@ -1,4 +1,5 @@
-﻿using System;
+﻿using CoupForTelegram.Models;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
@@ -43,6 +44,16 @@ namespace CoupForTelegram.Helpers
         public static string FormatHTML(this string str)
         {
             return str.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
+        }
+
+        public static string GetName(this Player player, bool menu = false)
+        {
+            if (menu)
+                return player.Name;
+            if (!String.IsNullOrEmpty(player.TeleUser.Username))
+                return $"<a href=\"telegram.me/{player.TeleUser.Username}\">{player.Name.FormatHTML()}</a>";
+
+            return player.Name.ToBold();
         }
     }
 }

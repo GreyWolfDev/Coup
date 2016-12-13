@@ -93,7 +93,7 @@ namespace CoupForTelegram
         internal static Task<Message> Edit(long id, int msgId, string text, InlineKeyboardMarkup replyMarkup = null)
         {
             //Bot.MessagesSent++;
-            return Bot.Api.EditMessageTextAsync(id, msgId, text, replyMarkup: replyMarkup);
+            return Bot.Api.EditMessageTextAsync(id, msgId, text, replyMarkup: replyMarkup, disableWebPagePreview: true, parseMode: ParseMode.Html);
         }
 
         internal static async Task<Message> SendAsync(string message, long id, bool clearKeyboard = false, InlineKeyboardMarkup customMenu = null, Game game = null)

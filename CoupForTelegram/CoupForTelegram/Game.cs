@@ -1,4 +1,5 @@
-﻿using CoupForTelegram.Models;
+﻿using CoupForTelegram.Helpers;
+using CoupForTelegram.Models;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -16,7 +17,8 @@ namespace CoupForTelegram
         public List<Card> Cards = CardHelper.GenerateCards();
         public List<Player> Players = new List<Player>();
         public GameState State = GameState.Joining;
-        
+        public int LastMessageId = 0;
+        public string LastMessageSent = "";
         /// <summary>
         /// Is this game for friends only, or strangers
         /// </summary>
@@ -27,35 +29,38 @@ namespace CoupForTelegram
         /// </summary>
         public bool IsGroup = false;
 
-        public Game(int id, User u, bool group, bool random)
+        public InlineKeyboardMarkup LastMenu { get; internal set; }
+
+        public Game(int id, User u, bool group, bool random, long chatid = 0)
         {
             GameId = id;
-            AddPlayer(u);
+            ChatId = chatid;
             IsGroup = group;
             IsRandom = random;
+            AddPlayer(u);
         }
 
-        public void AddPlayer(User u)
+        public int AddPlayer(User u)
         {
             if (u == null)
             {
                 Players.Add(new Player { Id = 32432, Name = "Test" });
                 StartGame();
-                return;
+                return 0;
             }
-
+            Player p = null;
             if (!Players.Any(x => x.Id == u.Id))
-                Players.Add(new Player { Id = u.Id, Name = (u.FirstName + " " + u.LastName).Trim() });
-            else
-                return;
-
-            if (IsGroup)
             {
-                Bot.SendAsync($"{u.FirstName} has joined the game", ChatId);
+                p = new Player { Id = u.Id, Name = (u.FirstName + " " + u.LastName).Trim(), TeleUser = u };
+                Players.Add(p);
             }
-
+            else
+                return 1;
+            var name = p.GetName();
+            Send($"{name} has joined the game").ToList();
             if (Players.Count >= 6)
-                StartGame();
+                new Task(StartGame).Start();
+            return 0;
         }
 
         public void StartGame()
@@ -86,13 +91,25 @@ namespace CoupForTelegram
             }
             //DEBUG OUT
 #if DEBUG
-            for (int i = 0; i< Players.Count(); i++)
+            for (int i = 0; i < Players.Count(); i++)
             {
                 Console.WriteLine($"Player {i}: {Players[i].Cards[0].Name}, {Players[i].Cards[1].Name}");
             }
             Console.WriteLine($"Deck:\n{Cards.Aggregate("", (a, b) => a + "\n" + b.Name)}");
 #endif
+            State = GameState.Running;
+
+            while (true)
+            {
+                //will use break to end the game
+                foreach (var p in Players)
+                {
+                    //it is the players turn.  Notify
+                }
+            }
         }
+
+
 
         public void TellCards(Player p)
         {
@@ -102,11 +119,59 @@ namespace CoupForTelegram
 
 
         #region Communications
-        private Task<Telegram.Bot.Types.Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null)
+        private IEnumerable<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false)
         {
+            var result = new List<Message>();
             if (id == 0)
-                id = ChatId;
-            return Bot.SendAsync(message, id, clearKeyboard, menu, game: this);
+            {
+                if (IsGroup)
+                    id = ChatId;
+                else
+                {
+                    foreach (var p in Players)
+                    {
+                        yield return Send(message, p.Id, clearKeyboard, menu, newMsg).First();
+                    }
+                }
+            }
+            if (id != 0)
+            {
+                Message r = null;
+                try
+                {
+
+                    var p = Players.FirstOrDefault(x => x.Id == id);
+                    var last = p?.LastMessageId ?? LastMessageId;
+                    var lastStr = p?.LastMessageSent ?? LastMessageSent;
+                    if (last != 0 & !newMsg)
+                    {
+                        message = lastStr + Environment.NewLine + message;
+                        r = Bot.Edit(id, last, message, menu ?? LastMenu).Result;
+                    }
+                    else
+                    {
+                        r = Bot.SendAsync(message, id, clearKeyboard, menu, game: this).Result;
+                        LastMenu = menu;
+                    }
+                    if (p != null)
+                    {
+                        p.LastMessageId = r.MessageId;
+                        p.LastMessageSent = message;
+                    }
+                    else
+                    {
+                        LastMessageId = r.MessageId;
+                        LastMessageSent = message;
+                        LastMenu = menu ?? LastMenu;
+                    }
+
+                }
+                catch (AggregateException e)
+                {
+
+                }
+                yield return r;
+            }
         }
         #endregion
     }

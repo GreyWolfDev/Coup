@@ -14,7 +14,7 @@ namespace CoupForTelegram.Handlers
         internal static void HandleMessage(Message m)
         {
             //start@coup2bot gameid
-           
+
             //get the command if any
             var cmd = m.Text.Split(' ')[0];
             cmd = cmd.Replace("@" + Bot.Me.Username, "").Replace("!", "").Replace("/", "");
@@ -25,7 +25,7 @@ namespace CoupForTelegram.Handlers
             switch (cmd)
             {
                 case "help":
-                    
+
                     break;
                 case "start":
                     //check for gameid
@@ -44,12 +44,16 @@ namespace CoupForTelegram.Handlers
                             else if (m.Chat.Type != Telegram.Bot.Types.Enums.ChatType.Channel)
                             {
                                 startgame.ChatId = m.Chat.Id;
-                                Bot.SendAsync(m.From.FirstName + " wants to play coup.  Up to 6 players total can join.  Click below to join the game!", m.Chat.Id, customMenu:
-                                    new InlineKeyboardMarkup(new[]
+                                var menu = new InlineKeyboardMarkup(new[]
                                     {
                                         new InlineKeyboardButton("Join", "join|" + id.ToString()),
                                         new InlineKeyboardButton("Start", "start|" + id.ToString())
-                                    }));
+                                    });
+                                var r = Bot.SendAsync(m.From.FirstName + " wants to play coup.  Up to 6 players total can join.  Click below to join the game!", m.Chat.Id, customMenu: menu
+                                    ).Result;
+                                startgame.LastMessageId = r.MessageId;
+                                startgame.LastMessageSent = r.Text;
+                                startgame.LastMenu = menu;
 
                             }
                         }
@@ -68,16 +72,24 @@ namespace CoupForTelegram.Handlers
                     // if PM, look for a game with the user as one of the players (alive)
                     if (!UserCanStartGame(m.From.Id, m.Chat.Id)) return;
                     //all is good?  Ask if PM or Group game (if in PM, otherwise assume group)
-                    Bot.Api.SendTextMessageAsync(m.Chat.Id, "You've chosen to start a new game.  Do you want to play in private with friends, private with random players, or in a group?", replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton[][] {
+                    if (m.Chat.Type == Telegram.Bot.Types.Enums.ChatType.Private)
+                    {
+                        Bot.Api.SendTextMessageAsync(m.Chat.Id, "You've chosen to start a new game.  Do you want to play in private with friends, private with random players, or in a group?", replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton[][] {
                         new InlineKeyboardButton[] { new InlineKeyboardButton("Private game - Friends", "spgf") },
                         new InlineKeyboardButton[] { new InlineKeyboardButton("Private game - Strangers", "spgs") },
                         new InlineKeyboardButton[] { new InlineKeyboardButton("Group game", "sgg") }
-                    }));
+                        }));
+                    }
+                    else
+                    {
+                        //group game
+                        g = CreateGame(m.From, true, chatid: m.Chat.Id);
+                    }
                     break;
 
                 case "test":
                     g = new Game(432, m.From, false, false);
-                        g.AddPlayer(null);
+                    g.AddPlayer(null);
                     break;
             }
         }
@@ -92,6 +104,7 @@ namespace CoupForTelegram.Handlers
             Game g;
             switch (cmd)
             {
+                //TODO: change these to enums with int values
                 case "spgf":
                     g = CreateGame(c.From);
                     Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Share this link to invite friends: https://telegram.me/{Bot.Me.Username}?start={g.GameId}");
@@ -101,8 +114,18 @@ namespace CoupForTelegram.Handlers
                     g = Program.Games.FirstOrDefault(x => x.State == GameState.Joining && x.Players.Count() < 6);
                     if (g != null)
                     {
-                        g.AddPlayer(c.From);
-                        Bot.ReplyToCallback(c, "You have joined a game!");
+                        var result = g.AddPlayer(c.From);
+                        switch (result)
+                        {
+                            case 1:
+                                Bot.ReplyToCallback(c, "You are already in a game!");
+                                break;
+                            case 0:
+                                Bot.ReplyToCallback(c, "You have joined a game!");
+                                break;
+                        }
+                        //TODO: give player list, total count
+                        //Bot.ReplyToCallback(c, "You have joined a game!");
                     }
                     else
                     {
@@ -119,15 +142,26 @@ namespace CoupForTelegram.Handlers
                     var id = int.Parse(c.Data.Split('|')[1]);
                     g = Program.Games.FirstOrDefault(x => x.GameId == id);
                     if (g != null)
-                    g.AddPlayer(c.From);
+                    {
+                        var success = g.AddPlayer(c.From);
+                        switch (success)
+                        {
+                            case 0:
+                                Bot.ReplyToCallback(c, "You have joined a game!", false, true);
+                                break;
+                            case 1:
+                                Bot.ReplyToCallback(c, "You are already in a game!", false, true);
+                                break;
+                        }
+                    }
                     break;
             }
 
         }
 
-        private static Game CreateGame(User u, bool group = false, bool random = false)
+        private static Game CreateGame(User u, bool group = false, bool random = false, long chatid = 0)
         {
-            var g = new Game(GenerateGameId(), u, group, random);
+            var g = new Game(GenerateGameId(), u, group, random, chatid);
             Program.Games.Add(g);
             return g;
         }
@@ -145,7 +179,7 @@ namespace CoupForTelegram.Handlers
 
         private static bool UserCanStartGame(int userid, long chatid)
         {
-            return true;
+            return !(Program.Games.Any(x => x.ChatId == chatid || x.Players.Any(p => p.Id == userid)));
         }
     }
 }
