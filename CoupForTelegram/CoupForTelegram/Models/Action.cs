@@ -43,7 +43,7 @@ namespace CoupForTelegram.Models
         /// <summary>
         /// Block asssassination
         /// </summary>
-        BlockAssassin,
+        BlockAssassinate,
         /// <summary>
         /// Block foreign aid
         /// </summary>

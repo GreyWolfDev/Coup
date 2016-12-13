@@ -154,7 +154,7 @@ namespace CoupForTelegram.Handlers
                         if (p != null)
                         {
                             g.CardToLose = cardStr;
-                            Bot.ReplyToCallback(c, "Card removed.");
+                            Bot.ReplyToCallback(c, "Choice Accepted - " + cardStr);
                         }
                     }
                     break;
@@ -168,8 +168,29 @@ namespace CoupForTelegram.Handlers
                         p = g.Players.FirstOrDefault(x => x.Id == c.From.Id);
                         if (p != null && p.Cards.Count() > 0)
                         {
-                            p.CallBluff = call;
-                            Bot.ReplyToCallback(c, "Choice accepted", false, true);
+                            if (p.Id == g.Turn)
+                            {
+                                Bot.ReplyToCallback(c, "You can't block yourself!", false, true);
+                            }
+                            else
+                            {
+                                switch (c.Data.Split('|')[1])
+                                {
+                                    case "call":
+                                        p.CallBluff = true;
+                                        p.Block = false;
+                                        break;
+                                    case "allow":
+                                        p.Block = p.CallBluff = false;
+                                        break;
+                                    case "block":
+                                        p.Block = true;
+                                        p.CallBluff = false;
+                                        break;
+                                }
+
+                                Bot.ReplyToCallback(c, "Choice accepted", false, true);
+                            }
                         }
                         else
                         {

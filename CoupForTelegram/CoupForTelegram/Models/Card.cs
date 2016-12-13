@@ -33,7 +33,7 @@ namespace CoupForTelegram.Models
         public Contessa()
         {
             Name = "Contessa";
-            ActionsAllowed.AddRange(new[] { Action.BlockAssassin });
+            ActionsAllowed.AddRange(new[] { Action.BlockAssassinate });
         }
     }
 

@@ -17,5 +17,6 @@ namespace CoupForTelegram.Models
         public int LastMessageId { get; set; } = 0;
         public string LastMessageSent { get; set; } = "";
         public bool? CallBluff { get; set; } = null;
+        public bool? Block { get; internal set; } = null;
     }
 }

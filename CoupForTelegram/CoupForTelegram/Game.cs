@@ -141,10 +141,12 @@ namespace CoupForTelegram
                         //Coup time!
                         Send($"{p.GetName()} has 10 or more coins, and must Coup someone.");
                         ChoiceMade = Action.Coup;
-
                     }
-                    //ok, no, so get actions that they can make
-                    Send($"{p.Name} please choose an action.  You have 1 minute to choose.", menu: CreateActionMenu(p), menuTo: p.Id);
+                    else
+                    {
+                        //ok, no, so get actions that they can make
+                        Send($"{p.Name} please choose an action.  You have 1 minute to choose.", menu: CreateActionMenu(p), menuTo: p.Id);
+                    }
                     var choice = WaitForChoice(ChoiceType.Action);
                     Console.WriteLine($"{p.Name} has chosen to {ChoiceMade}");
                     Player target;
@@ -162,6 +164,8 @@ namespace CoupForTelegram
                         case Action.ForeignAid:
                             if (PlayerMadeBlockableAction(p, choice))
                             {
+                                LastMenu = null;
+                                Send($"{p.Name} was not blocked, and has gained two coins.");
                                 p.Coins += 2;
                             }
                             break;
@@ -185,6 +189,8 @@ namespace CoupForTelegram
                         case Action.Tax:
                             if (PlayerMadeBlockableAction(p, Action.Tax))
                             {
+                                LastMenu = null;
+                                Send($"{p.Name} was not blocked, and has gained three coins.");
                                 p.Coins += 3;
                             }
                             break;
@@ -194,10 +200,11 @@ namespace CoupForTelegram
                         case Action.Exchange:
                             break;
                         case Action.Steal:
+                            
                             break;
                         case Action.BlockSteal:
                             break;
-                        case Action.BlockAssassin:
+                        case Action.BlockAssassinate:
                             break;
                         case Action.BlockForeignAid:
                             break;
@@ -210,7 +217,10 @@ namespace CoupForTelegram
                     ChoiceTarget = 0;
                     CardToLose = "";
                     foreach (var pl in Players)
+                    {
                         pl.CallBluff = null;
+                        pl.Block = null;
+                    }
                     if (Players.Count(x => x.Cards.Count() > 0) == 1)
                     {
                         //game is over
@@ -251,7 +261,7 @@ namespace CoupForTelegram
                     return CardToLose != "";
                 case ChoiceType.Block:
                     //check if ANYONE has blocked, so first person to block is the one that has to deal with it
-                    return Players.Any(x => x.CallBluff == true) || Players.All(x => x.CallBluff == false);
+                    return Players.Any(x => x.CallBluff == true || x.Block == true) || Players.All(x => x.CallBluff == false && x.Block == false);
                 default:
                     return true;
             }
@@ -261,12 +271,14 @@ namespace CoupForTelegram
         {
             //TODO finish this up.
             var aMsg = "";
-            Player bluffer;
+            Player bluffer = null, blocker = null, bluffBlock = null;
             bool canBlock = false;
+            bool canBluff = true;
             switch (a)
             {
                 case Action.ForeignAid:
-                    aMsg = $"{p.Name} has chosen to take foreign aid (2 coins). Does anyone want to block / call bluff?";
+                    aMsg = $"{p.Name} has chosen to take foreign aid (2 coins). Does anyone want to block?";
+                    canBluff = false;
                     canBlock = true;
                     break;
                 case Action.Assassinate:
@@ -286,78 +298,109 @@ namespace CoupForTelegram
                 case Action.BlockSteal:
                     aMsg = $"{p.Name} has chosen to block {t.Name} from stealing [{cardUsed}]. Does anyone want to call bluff?";
                     break;
-                case Action.BlockAssassin:
+                case Action.BlockAssassinate:
+                    cardUsed = "Contessa";
                     aMsg = $"{p.Name} has chosen to block {t.Name} from assassinating [Contessa]. Does anyone want to call bluff?";
                     break;
                 case Action.BlockForeignAid:
+                    cardUsed = "Duke";
                     aMsg = $"{p.Name} has chosen to block {t.Name} from taking foreign aid [Duke]. Does anyone want to call bluff?";
                     break;
             }
-            Send(aMsg, menu: CreateBlockMenu(canBlock), menuNot: p.Id);
+            Send(aMsg, menu: CreateBlockMenu(canBlock, canBluff), menuNot: p.Id);
+
+            foreach (var pl in Players)
+            {
+                if (canBlock)
+                    pl.Block = null;
+                else
+                    pl.Block = false;
+
+                if (canBluff)
+                    pl.CallBluff = null;
+                else
+                    pl.CallBluff = false;
+
+                if (Turn == pl.Id)
+                {
+                    pl.CallBluff = pl.Block = false;
+                }
+
+            }
+
             WaitForChoice(ChoiceType.Block);
-            var blocker = Players.FirstOrDefault(x => x.CallBluff == true);
+
+            //check to see if anyone called block or bluff
+            bluffer = Players.FirstOrDefault(x => x.CallBluff == true);
+            if (canBlock)
+                blocker = Players.FirstOrDefault(x => x.Block == true);
             if (blocker != null)
             {
                 foreach (var pl in Players)
-                    pl.CallBluff = null;
-                Send($"{blocker.Name} has chosen to block with their Duke.  Does anyone wish to call {blocker.Name}'s bluff?", menu: CreateBluffMenu(), menuNot: blocker.Id);
-                LastMenu = null;
-                WaitForChoice(ChoiceType.Block);
-                bluffer = Players.FirstOrDefault(x => x.CallBluff == true);
-                if (bluffer != null)
+                    pl.Block = null;
+                if (a == Action.Steal)
                 {
-                    //fun time
-                    var msg = $"{bluffer.Name} has chosen to call a bluff.\n";
-                    //check that the blocker has a duke
-                    if (PlayerCanDoAction(Action.BlockForeignAid, blocker))
+                    //more than one card can block stealing
+                    var menu = new InlineKeyboardMarkup(new[] { "Captain", "Ambassador" }.Select(x => new InlineKeyboardButton(x, $"card|{GameId}|{x}")).ToArray());
+                    Send($"{blocker.Name} has chosen to block.  Please choose which card you are blocking with", menu: menu);
+                    WaitForChoice(ChoiceType.Card);
+                    cardUsed = CardToLose;
+                    CardToLose = "";
+                }
+                var blocked = PlayerMadeBlockableAction(blocker, (Action)Enum.Parse(typeof(Action), "Block" + a.ToString(), true), p, cardUsed);
+                return !blocked;
+            }
+            else if (bluffer != null)
+            {
+                LastMenu = null;
+                //fun time
+                var msg = $"{bluffer.Name} has chosen to call a bluff.\n";
+                //check that the blocker has a duke
+                if (PlayerCanDoAction(a, p))
+                {
+                    //player has a card!
+                    if (bluffer.Cards.Count() == 1)
                     {
-                        //player has a duke!
-                        if (blocker.Cards.Count() == 1)
-                        {
-                            Graveyard.Add(blocker.Cards.First());
-                            blocker.Cards.Clear();
-                            Send($"{blocker.Name}, your bluff was called.  You are out of cards, and therefore out of the game!");
-                        }
-                        else
-                        {
-                            Send(msg + $"{bluffer.Name}, {blocker.Name} had a Duke.  You must pick a card to lose!");
-                            //TODO pick card to lose
-                            PlayerLoseCard(bluffer);
-                        }
-                        //blocker's Duke goes back in deck, blocker is given new card
-                        var duke = blocker.Cards.First(x => x.Name == "Duke");
-                        Cards.Add(duke);
-                        blocker.Cards.Remove(duke);
-                        Cards.Shuffle();
-                        var card = Cards.First();
-                        Cards.Remove(card);
-                        blocker.Cards.Add(card);
-                        Send($"You have lost your Duke.  Your new card is the " + card.Name, blocker.Id, newMsg: true);
+                        Graveyard.Add(bluffer.Cards.First());
+                        bluffer.Cards.Clear();
+                        Send($"{bluffer.Name}, {p.Name} had {cardUsed}.  You are out of cards, and therefore out of the game!");
                     }
                     else
                     {
-                        if (blocker.Cards.Count() == 1)
-                        {
-                            Graveyard.Add(blocker.Cards.First());
-                            blocker.Cards.Clear();
-                            Send($"{blocker.Name}, your bluff was called.  You are out of cards, and therefore out of the game!");
-                        }
-                        else
-                        {
-                            Send(msg + $"{blocker.Name}, you did not have a Duke! You must pick a card to lose.");
-                        }
+                        Send(msg + $"{bluffer.Name}, {p.Name} had {cardUsed}.  You must pick a card to lose!");
+                        //TODO pick card to lose
+                        PlayerLoseCard(bluffer);
                     }
+                    //players card goes back in deck, given new card
+                    var card = p.Cards.First(x => x.Name == cardUsed);
+                    Cards.Add(card);
+                    p.Cards.Remove(card);
+                    Cards.Shuffle();
+                    card = Cards.First();
+                    Cards.Remove(card);
+                    p.Cards.Add(card);
+                    Send($"You have lost your {cardUsed}.  Your new card is " + card.Name, p.Id, newMsg: true);
+                    return true;
                 }
                 else
                 {
-                    Send($"{blocker.Name}'s block was not challenged.  {p.Name} does not take any foreign aid.");
+                    if (p.Cards.Count() == 1)
+                    {
+                        Graveyard.Add(p.Cards.First());
+                        p.Cards.Clear();
+                        Send($"{p.Name}, your bluff was called.  You are out of cards, and therefore out of the game!");
+                    }
+                    else
+                    {
+                        Send(msg + $"{p.Name}, you did not have {cardUsed}! You must pick a card to lose.");
+                        PlayerLoseCard(p);
+                    }
+                    return false;
                 }
             }
             else
             {
-                LastMenu = null;
-                p.Coins += 2;
-                Send($"No one has blocked.  {p.Name} has taken 2 coins.");
+                return true;
             }
         }
 
@@ -372,7 +415,9 @@ namespace CoupForTelegram
                 card = p.Cards.FirstOrDefault(x => x.Name == CardToLose);
 
             p.Cards.Remove(card);
-            g.Graveyard.Add(card);
+            Graveyard.Add(card);
+            LastMenu = null;
+            Send($"{p.Name} has lost {card.Name}.  It is now in the graveyard.");
         }
 
         private bool PlayerCanDoAction(Action a, Player p)
@@ -394,11 +439,11 @@ namespace CoupForTelegram
         //    });
         //}
 
-        public InlineKeyboardMarkup CreateBlockMenu(bool canBlock)
+        public InlineKeyboardMarkup CreateBlockMenu(bool canBlock, bool canBluff = true)
         {
             var choices = new List<InlineKeyboardButton>();
-
-            choices.Add(new InlineKeyboardButton("Call Bluff", $"bluff|call|{GameId}"));
+            if (canBluff)
+                choices.Add(new InlineKeyboardButton("Call Bluff", $"bluff|call|{GameId}"));
             choices.Add(new InlineKeyboardButton("Allow", $"bluff|allow|{GameId}"));
             if (canBlock)
                 choices.Add(new InlineKeyboardButton("Block", $"bluff|block|{GameId}"));
