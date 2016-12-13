@@ -16,5 +16,6 @@ namespace CoupForTelegram.Models
         public int Coins { get; set; } = 7;
         public int LastMessageId { get; set; } = 0;
         public string LastMessageSent { get; set; } = "";
+        public bool? CallBluff { get; set; } = null;
     }
 }

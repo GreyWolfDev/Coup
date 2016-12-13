@@ -17,6 +17,7 @@ namespace CoupForTelegram
         public int GameId;
         public long ChatId;
         public List<Card> Cards = CardHelper.GenerateCards();
+        public List<Card> Graveyard = new List<Card>();
         public List<Player> Players = new List<Player>();
         public GameState State = GameState.Joining;
         public int LastMessageId = 0;
@@ -25,6 +26,7 @@ namespace CoupForTelegram
         public int ChoiceTarget = 0;
         public int Turn = 0;
         public int CounterActionPlayer = 0;
+        public string CardToLose = "";
         /// <summary>
         /// Is this game for friends only, or strangers
         /// </summary>
@@ -85,6 +87,8 @@ namespace CoupForTelegram
 
         public void StartGame()
         {
+            LastMenu = null;
+            Send("Game is starting!");
             if (Players.Count < 2)
             {
                 //end the game
@@ -94,12 +98,12 @@ namespace CoupForTelegram
             State = GameState.Initializing;
 
             //hand out cards
-            foreach (var p in Players)
-            {
-                var card = Cards.First();
-                Cards.Remove(card);
-                p.Cards.Add(card);
-            }
+            //foreach (var p in Players)
+            //{
+            //    var card = Cards.First();
+            //    Cards.Remove(card);
+            //    p.Cards.Add(card);
+            //}
             //round robin :P
             foreach (var p in Players)
             {
@@ -114,7 +118,7 @@ namespace CoupForTelegram
 #if DEBUG
             for (int i = 0; i < Players.Count(); i++)
             {
-                Console.WriteLine($"Player {i}: {Players[i].Cards[0].Name}, {Players[i].Cards[1].Name}");
+                //Console.WriteLine($"Player {i}: {Players[i].Cards[0].Name}, {Players[i].Cards[1].Name}");
             }
             Console.WriteLine($"Deck:\n{Cards.Aggregate("", (a, b) => a + "\n" + b.Name)}");
 #endif
@@ -125,8 +129,11 @@ namespace CoupForTelegram
                 //will use break to end the game
                 foreach (var p in Players)
                 {
+                    if (p.Cards.Count() == 0)
+                        continue;
                     Turn = p.Id;
-                    Send($"{p.GetName()}'s turn.", newMsg: true).ToList();
+                    Send($"{p.GetName()}'s turn. {p.Name} has {p.Coins} coins.", newMsg: true).ToList();
+                    p.CallBluff = false;
                     //it is the players turn.
                     //first off, do they have to Coup?
                     if (p.Coins >= 10)
@@ -137,28 +144,52 @@ namespace CoupForTelegram
 
                     }
                     //ok, no, so get actions that they can make
-                    Send($"{p.GetName()} please choose an action.  You have 1 minute to choose.", menu: CreateActionMenu(p), menuTo: p.Id);
-                    var choice = WaitForChoice();
+                    Send($"{p.Name} please choose an action.  You have 1 minute to choose.", menu: CreateActionMenu(p), menuTo: p.Id);
+                    var choice = WaitForChoice(ChoiceType.Action);
                     Console.WriteLine($"{p.Name} has chosen to {ChoiceMade}");
                     Player target;
+                    Player blocker;
+                    Player bluffer;
                     switch (choice)
                     {
+                        //DONE
                         case Action.Income:
+                            LastMenu = null;
                             Send($"{p.Name} has chosen to take income (1 coin).");
                             p.Coins++;
                             break;
+
                         case Action.ForeignAid:
+                            if (PlayerMadeBlockableAction(p, choice))
+                            {
+                                p.Coins += 2;
+                            }
                             break;
                         case Action.Coup:
-                            Send($"{p.Name} please choose who to Coup.  You have 1 minute to choose.", menu: CreateCoupMenu(p), menuTo: p.Id);
-                            WaitForChoice(true);
+                            Send($"{p.Name} please choose who to Coup.  You have 1 minute to choose.", menu: CreateTargetMenu(p), menuTo: p.Id);
+                            LastMenu = null;
+                            WaitForChoice(ChoiceType.Target);
                             target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
-                            Send($"{p.Name} has chosen to Coup {target.Name}!  {target.Name} please choose a card to lose.");
+                            if (target.Cards.Count() == 1)
+                            {
+                                Graveyard.Add(target.Cards.First());
+                                target.Cards.Clear();
+                                Send($"{target.Name}, you have been couped.  You are out of cards, and therefore out of the game!");
+                            }
+                            else
+                            {
+                                Send($"{p.Name.ToBold()} has chosen to Coup {target.Name.ToBold()}!  {target.Name.ToBold()} please choose a card to lose.");
+                                PlayerLoseCard(target);
+                            }
                             break;
                         case Action.Tax:
-                            Send($"{p.Name} has chosen to Tax (3 coins) with their Duke.  Does anyone wish to call bluff?", menu: CreateBluffMenu(), menuNot: p.Id);
+                            if (PlayerMadeBlockableAction(p, Action.Tax))
+                            {
+                                p.Coins += 3;
+                            }
                             break;
                         case Action.Assassinate:
+                            //TODO: get the target
                             break;
                         case Action.Exchange:
                             break;
@@ -174,19 +205,32 @@ namespace CoupForTelegram
                             break;
                     }
 
+                    //reset all the things
                     ChoiceMade = Action.None;
+                    ChoiceTarget = 0;
+                    CardToLose = "";
+                    foreach (var pl in Players)
+                        pl.CallBluff = null;
+                    if (Players.Count(x => x.Cards.Count() > 0) == 1)
+                    {
+                        //game is over
+                        var winner = Players.FirstOrDefault(x => x.Cards.Count() > 0);
+                        Send($"{winner.GetName()} has won the game!", newMsg: true);
+                        State = GameState.Ended;
+                        return;
+                    }
+
                 }
             }
         }
-
         /// <summary>
         /// Sleeps until a choice has been made
         /// </summary>
         /// <param name="timeToChoose">Time in half seconds to choose</param>
         /// <returns>Whether or not a choice was actually made</returns>
-        private Action WaitForChoice(bool choosingPlayer = false, int timeToChoose = 120)
+        private Action WaitForChoice(ChoiceType type, int timeToChoose = 120)
         {
-            while (choosingPlayer ? ChoiceTarget == 0 : ChoiceMade == Action.None && timeToChoose > 0)
+            while (!HasChoiceBeenMade(type) && timeToChoose > 0)
             {
                 Thread.Sleep(500);
                 timeToChoose--;
@@ -195,14 +239,171 @@ namespace CoupForTelegram
         }
 
 
-        #region Menus
-        public InlineKeyboardMarkup CreateBluffMenu()
+        private bool HasChoiceBeenMade(ChoiceType type)
         {
-            return new InlineKeyboardMarkup(new[]
+            switch (type)
             {
-                new InlineKeyboardButton("Call Bluff", $"bluff|{GameId}"),
-                new InlineKeyboardButton("Allow", $"allow|{GameId}")
-            });
+                case ChoiceType.Action:
+                    return ChoiceMade != Action.None;
+                case ChoiceType.Target:
+                    return ChoiceTarget != 0;
+                case ChoiceType.Card:
+                    return CardToLose != "";
+                case ChoiceType.Block:
+                    //check if ANYONE has blocked, so first person to block is the one that has to deal with it
+                    return Players.Any(x => x.CallBluff == true) || Players.All(x => x.CallBluff == false);
+                default:
+                    return true;
+            }
+        }
+
+        private bool PlayerMadeBlockableAction(Player p, Action a, Player t = null, string cardUsed = "")
+        {
+            //TODO finish this up.
+            var aMsg = "";
+            Player bluffer;
+            bool canBlock = false;
+            switch (a)
+            {
+                case Action.ForeignAid:
+                    aMsg = $"{p.Name} has chosen to take foreign aid (2 coins). Does anyone want to block / call bluff?";
+                    canBlock = true;
+                    break;
+                case Action.Assassinate:
+                    aMsg = $"{p.Name} has chosen to assassinate {t.Name} [Assassin]. Does anyone want to block / call bluff?";
+                    canBlock = true;
+                    break;
+                case Action.Tax:
+                    aMsg = $"{p.Name} has chosen to take tax (3 coins) [Duke]. Does anyone want to call bluff?";
+                    break;
+                case Action.Exchange:
+                    aMsg = $"{p.Name} has chosen to exchange cards with the deck [Ambassador]. Does anyone want to call bluff?";
+                    break;
+                case Action.Steal:
+                    aMsg = $"{p.Name} has chosen to steal from {t.Name} [Captain]. Does anyone want to block / call bluff?";
+                    canBlock = true;
+                    break;
+                case Action.BlockSteal:
+                    aMsg = $"{p.Name} has chosen to block {t.Name} from stealing [{cardUsed}]. Does anyone want to call bluff?";
+                    break;
+                case Action.BlockAssassin:
+                    aMsg = $"{p.Name} has chosen to block {t.Name} from assassinating [Contessa]. Does anyone want to call bluff?";
+                    break;
+                case Action.BlockForeignAid:
+                    aMsg = $"{p.Name} has chosen to block {t.Name} from taking foreign aid [Duke]. Does anyone want to call bluff?";
+                    break;
+            }
+            Send(aMsg, menu: CreateBlockMenu(canBlock), menuNot: p.Id);
+            WaitForChoice(ChoiceType.Block);
+            var blocker = Players.FirstOrDefault(x => x.CallBluff == true);
+            if (blocker != null)
+            {
+                foreach (var pl in Players)
+                    pl.CallBluff = null;
+                Send($"{blocker.Name} has chosen to block with their Duke.  Does anyone wish to call {blocker.Name}'s bluff?", menu: CreateBluffMenu(), menuNot: blocker.Id);
+                LastMenu = null;
+                WaitForChoice(ChoiceType.Block);
+                bluffer = Players.FirstOrDefault(x => x.CallBluff == true);
+                if (bluffer != null)
+                {
+                    //fun time
+                    var msg = $"{bluffer.Name} has chosen to call a bluff.\n";
+                    //check that the blocker has a duke
+                    if (PlayerCanDoAction(Action.BlockForeignAid, blocker))
+                    {
+                        //player has a duke!
+                        if (blocker.Cards.Count() == 1)
+                        {
+                            Graveyard.Add(blocker.Cards.First());
+                            blocker.Cards.Clear();
+                            Send($"{blocker.Name}, your bluff was called.  You are out of cards, and therefore out of the game!");
+                        }
+                        else
+                        {
+                            Send(msg + $"{bluffer.Name}, {blocker.Name} had a Duke.  You must pick a card to lose!");
+                            //TODO pick card to lose
+                            PlayerLoseCard(bluffer);
+                        }
+                        //blocker's Duke goes back in deck, blocker is given new card
+                        var duke = blocker.Cards.First(x => x.Name == "Duke");
+                        Cards.Add(duke);
+                        blocker.Cards.Remove(duke);
+                        Cards.Shuffle();
+                        var card = Cards.First();
+                        Cards.Remove(card);
+                        blocker.Cards.Add(card);
+                        Send($"You have lost your Duke.  Your new card is the " + card.Name, blocker.Id, newMsg: true);
+                    }
+                    else
+                    {
+                        if (blocker.Cards.Count() == 1)
+                        {
+                            Graveyard.Add(blocker.Cards.First());
+                            blocker.Cards.Clear();
+                            Send($"{blocker.Name}, your bluff was called.  You are out of cards, and therefore out of the game!");
+                        }
+                        else
+                        {
+                            Send(msg + $"{blocker.Name}, you did not have a Duke! You must pick a card to lose.");
+                        }
+                    }
+                }
+                else
+                {
+                    Send($"{blocker.Name}'s block was not challenged.  {p.Name} does not take any foreign aid.");
+                }
+            }
+            else
+            {
+                LastMenu = null;
+                p.Coins += 2;
+                Send($"No one has blocked.  {p.Name} has taken 2 coins.");
+            }
+        }
+
+        private void PlayerLoseCard(Player p)
+        {
+            //send menu
+            WaitForChoice(ChoiceType.Card);
+            Card card;
+            if (CardToLose == "")
+                card = p.Cards.First();
+            else
+                card = p.Cards.FirstOrDefault(x => x.Name == CardToLose);
+
+            p.Cards.Remove(card);
+            g.Graveyard.Add(card);
+        }
+
+        private bool PlayerCanDoAction(Action a, Player p)
+        {
+            return p.Cards.Any(x => x.ActionsAllowed.Contains(a));
+        }
+
+        #region Menus
+        public InlineKeyboardMarkup CreateCardMenu(Player p)
+        {
+            return new InlineKeyboardMarkup(new[] { p.Cards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray() });
+        }
+        //public InlineKeyboardMarkup CreateBluffMenu()
+        //{
+        //    return new InlineKeyboardMarkup(new[]
+        //    {
+        //        new InlineKeyboardButton("Call Bluff", $"bluff|call|{GameId}"),
+        //        new InlineKeyboardButton("Allow", $"bluff|allow|{GameId}")
+        //    });
+        //}
+
+        public InlineKeyboardMarkup CreateBlockMenu(bool canBlock)
+        {
+            var choices = new List<InlineKeyboardButton>();
+
+            choices.Add(new InlineKeyboardButton("Call Bluff", $"bluff|call|{GameId}"));
+            choices.Add(new InlineKeyboardButton("Allow", $"bluff|allow|{GameId}"));
+            if (canBlock)
+                choices.Add(new InlineKeyboardButton("Block", $"bluff|block|{GameId}"));
+            return new InlineKeyboardMarkup(choices.ToArray());
+
         }
         public InlineKeyboardMarkup CreateActionMenu(Player p)
         {
@@ -214,9 +415,9 @@ namespace CoupForTelegram
             //return choice menu
             return new InlineKeyboardMarkup(choices.Select(x => new[] { new InlineKeyboardButton(x.ToString(), $"{x}|{GameId}") }).ToArray());
         }
-        public InlineKeyboardMarkup CreateCoupMenu(Player p)
+        public InlineKeyboardMarkup CreateTargetMenu(Player p)
         {
-            var choices = Players.Where(x => x.Id != p.Id).Select(x => new[] { new InlineKeyboardButton(x.Name, $"choose|{GameId}|{x.Id}") }).ToArray();
+            var choices = Players.Where(x => x.Id != p.Id && x.Cards.Count() > 0).Select(x => new[] { new InlineKeyboardButton(x.Name, $"choose|{GameId}|{x.Id}") }).ToArray();
             return new InlineKeyboardMarkup(choices);
         }
         #endregion

@@ -61,6 +61,7 @@
     <Compile Include="Helpers\Extensions.cs" />
     <Compile Include="Models\Action.cs" />
     <Compile Include="Models\Card.cs" />
+    <Compile Include="Models\ChoiceType.cs" />
     <Compile Include="Models\GameState.cs" />
     <Compile Include="Models\Player.cs" />
     <Compile Include="Program.cs" />

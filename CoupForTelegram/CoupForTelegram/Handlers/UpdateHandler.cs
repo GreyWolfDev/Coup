@@ -13,6 +13,8 @@ namespace CoupForTelegram.Handlers
     {
         internal static void HandleMessage(Message m)
         {
+            if (m.Date < Program.StartTime.AddMinutes(-1))
+                return;
             //start@coup2bot gameid
 
             //get the command if any
@@ -84,6 +86,16 @@ namespace CoupForTelegram.Handlers
                     {
                         //group game
                         g = CreateGame(m.From, true, chatid: m.Chat.Id);
+                        var menu = new InlineKeyboardMarkup(new[]
+                                    {
+                                        new InlineKeyboardButton("Join", "join|" + g.GameId.ToString()),
+                                        new InlineKeyboardButton("Start", "start|" + g.GameId.ToString())
+                                    });
+                        var r = Bot.SendAsync(m.From.FirstName + " wants to play coup.  Up to 6 players total can join.  Click below to join the game!", m.Chat.Id, customMenu: menu
+                                    ).Result;
+                        g.LastMessageId = r.MessageId;
+                        g.LastMessageSent = r.Text;
+                        g.LastMenu = menu;
                     }
                     break;
                 case "leave":
@@ -110,6 +122,7 @@ namespace CoupForTelegram.Handlers
                 cmd = cmd.Split('|')[0];
             Game g;
             int id;
+            Player p;
 
             Models.Action a;
             if (Enum.TryParse(cmd, out a))
@@ -118,12 +131,83 @@ namespace CoupForTelegram.Handlers
                 g = Program.Games.FirstOrDefault(x => x.GameId == id);
                 if (g != null)
                 {
-                    g.ChoiceMade = a;
+                    if (g.Turn == c.From.Id)
+                        g.ChoiceMade = a;
+                    else
+                        Bot.ReplyToCallback(c, "It's not your turn!", false, true);
                 }
+                else
+                    Bot.ReplyToCallback(c, $"That game isn't active anymore...");
             }
 
             switch (cmd)
             {
+                case "card":
+                    //player is losing a card
+                    var cardStr = c.Data.Split('|')[2];
+
+                    id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g != null)
+                    {
+                        p = g.Players.FirstOrDefault(x => x.Id == c.From.Id);
+                        if (p != null)
+                        {
+                            g.CardToLose = cardStr;
+                            Bot.ReplyToCallback(c, "Card removed.");
+                        }
+                    }
+                    break;
+                case "bluff":
+                    bool call = c.Data.Split('|')[1] == "call";
+                    id = int.Parse(c.Data.Split('|')[2]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g != null)
+                    {
+                        //get the player
+                        p = g.Players.FirstOrDefault(x => x.Id == c.From.Id);
+                        if (p != null && p.Cards.Count() > 0)
+                        {
+                            p.CallBluff = call;
+                            Bot.ReplyToCallback(c, "Choice accepted", false, true);
+                        }
+                        else
+                        {
+                            Bot.ReplyToCallback(c, "You aren't in the game!", false, true);
+                        }
+
+                    }
+                    break;
+                case "choose":
+                    //picking a target
+                    var target = int.Parse(c.Data.Split('|')[2]);
+                    id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+
+
+                    if (g != null)
+                    {
+                        //get the player
+                        p = g.Players.FirstOrDefault(x => x.Id == c.From.Id);
+                        if (p != null && p.Cards.Count() > 0)
+                        {
+                            if (g.Turn != c.From.Id)
+                            {
+                                Bot.ReplyToCallback(c, "It's not your choice!", false, true);
+                            }
+                            else
+                            {
+                                g.ChoiceTarget = target;
+                                Bot.ReplyToCallback(c, "Choice accepted", false, true);
+                            }
+                        }
+                        else
+                        {
+                            Bot.ReplyToCallback(c, "You aren't in the game!", false, true);
+                        }
+
+                    }
+                    break;
                 //TODO: change these to enums with int values
                 case "spgf":
                     g = CreateGame(c.From);

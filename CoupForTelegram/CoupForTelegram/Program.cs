@@ -28,11 +28,29 @@ namespace CoupForTelegram
         internal static Random R = new Random();
 
         internal static List<Game> Games = new List<Game>();
-        
+        internal static DateTime StartTime = DateTime.UtcNow;
         static void Main(string[] args)
         {
             new Thread(Bot.Initialize).Start();
+            new Thread(Cleaner).Start();
             Thread.Sleep(-1);
+        }
+
+        static void Cleaner()
+        {
+            while (true)
+            {
+                
+                for (int i = Games.Count() - 1; i >= 0; i--)
+                {
+                    if (Games[i].State == Models.GameState.Ended)
+                    {
+                        Games[i] = null;
+                        Games.RemoveAt(i);
+                    }
+                }
+                Thread.Sleep(1000);
+            }
         }
 
         
