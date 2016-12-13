@@ -86,6 +86,13 @@ namespace CoupForTelegram.Handlers
                         g = CreateGame(m.From, true, chatid: m.Chat.Id);
                     }
                     break;
+                case "leave":
+                    //find the game
+                    g = Program.Games.FirstOrDefault(x => x.Players.Any(p => p.Id == m.From.Id));
+                    var rem = g?.RemovePlayer(m.From);
+                    if (rem == 1)
+                        Bot.Api.SendTextMessageAsync(m.From.Id, $"You have been remove from game {g.GameId}");
+                    break;
 
                 case "test":
                     g = new Game(432, m.From, false, false);
@@ -102,6 +109,19 @@ namespace CoupForTelegram.Handlers
             if (cmd.Contains("|"))
                 cmd = cmd.Split('|')[0];
             Game g;
+            int id;
+
+            Models.Action a;
+            if (Enum.TryParse(cmd, out a))
+            {
+                id = int.Parse(c.Data.Split('|')[1]);
+                g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                if (g != null)
+                {
+                    g.ChoiceMade = a;
+                }
+            }
+
             switch (cmd)
             {
                 //TODO: change these to enums with int values
@@ -130,7 +150,7 @@ namespace CoupForTelegram.Handlers
                     else
                     {
                         g = CreateGame(c.From, false, true);
-                        Bot.ReplyToCallback(c, $"There were no games available, so I have created a new game for you.  Please wait for others to join!");
+                        Bot.ReplyToCallback(c, $"There were no games available, so I have created a new game for you.  Please wait for others to join!", replyMarkup: new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Start Game", $"start|{g.GameId}") }));
                     }
                     Console.WriteLine($"{c.From.FirstName} has joined game: {g.GameId}");
                     break;
@@ -139,7 +159,7 @@ namespace CoupForTelegram.Handlers
                     Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Click below to send the game to the group!", replyMarkup: new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Click here") { Url = $"https://telegram.me/{Bot.Me.Username}?startgroup={g.GameId}" } }));
                     break;
                 case "join":
-                    var id = int.Parse(c.Data.Split('|')[1]);
+                    id = int.Parse(c.Data.Split('|')[1]);
                     g = Program.Games.FirstOrDefault(x => x.GameId == id);
                     if (g != null)
                     {
@@ -155,6 +175,12 @@ namespace CoupForTelegram.Handlers
                         }
                     }
                     break;
+                case "start":
+                    id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    g.StartGame();
+                    break;
+
             }
 
         }

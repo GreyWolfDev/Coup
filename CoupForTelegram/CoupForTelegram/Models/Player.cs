@@ -13,7 +13,7 @@ namespace CoupForTelegram.Models
         public User TeleUser { get; set; }
         public string Name { get; set; }
         public List<Card> Cards { get; set; } = new List<Card>();
-        public int Coins { get; set; } = 2;
+        public int Coins { get; set; } = 7;
         public int LastMessageId { get; set; } = 0;
         public string LastMessageSent { get; set; } = "";
     }

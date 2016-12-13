@@ -47,6 +47,10 @@ namespace CoupForTelegram.Models
         /// <summary>
         /// Block foreign aid
         /// </summary>
-        BlockForeignAid
+        BlockForeignAid,
+        /// <summary>
+        /// No choice made
+        /// </summary>
+        None
     }
 }

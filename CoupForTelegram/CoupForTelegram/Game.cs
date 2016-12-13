@@ -4,9 +4,11 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
+using Action = CoupForTelegram.Models.Action;
 
 namespace CoupForTelegram
 {
@@ -19,6 +21,10 @@ namespace CoupForTelegram
         public GameState State = GameState.Joining;
         public int LastMessageId = 0;
         public string LastMessageSent = "";
+        public Action ChoiceMade = Action.None;
+        public int ChoiceTarget = 0;
+        public int Turn = 0;
+        public int CounterActionPlayer = 0;
         /// <summary>
         /// Is this game for friends only, or strangers
         /// </summary>
@@ -57,9 +63,23 @@ namespace CoupForTelegram
             else
                 return 1;
             var name = p.GetName();
-            Send($"{name} has joined the game").ToList();
+            Send($"{name} has joined the game");
             if (Players.Count >= 6)
                 new Task(StartGame).Start();
+            return 0;
+        }
+
+        public int RemovePlayer(User u)
+        {
+            if (State == GameState.Joining)
+            {
+                Players.RemoveAll(x => x.Id == u.Id);
+                if (Players.Count() == 0)
+                {
+                    State = GameState.Ended;
+                }
+                return 1;
+            }
             return 0;
         }
 
@@ -68,6 +88,7 @@ namespace CoupForTelegram
             if (Players.Count < 2)
             {
                 //end the game
+                //TODO cancel game
             }
 
             State = GameState.Initializing;
@@ -104,22 +125,108 @@ namespace CoupForTelegram
                 //will use break to end the game
                 foreach (var p in Players)
                 {
-                    //it is the players turn.  Notify
+                    Turn = p.Id;
+                    Send($"{p.GetName()}'s turn.", newMsg: true).ToList();
+                    //it is the players turn.
+                    //first off, do they have to Coup?
+                    if (p.Coins >= 10)
+                    {
+                        //Coup time!
+                        Send($"{p.GetName()} has 10 or more coins, and must Coup someone.");
+                        ChoiceMade = Action.Coup;
+
+                    }
+                    //ok, no, so get actions that they can make
+                    Send($"{p.GetName()} please choose an action.  You have 1 minute to choose.", menu: CreateActionMenu(p), menuTo: p.Id);
+                    var choice = WaitForChoice();
+                    Console.WriteLine($"{p.Name} has chosen to {ChoiceMade}");
+                    Player target;
+                    switch (choice)
+                    {
+                        case Action.Income:
+                            Send($"{p.Name} has chosen to take income (1 coin).");
+                            p.Coins++;
+                            break;
+                        case Action.ForeignAid:
+                            break;
+                        case Action.Coup:
+                            Send($"{p.Name} please choose who to Coup.  You have 1 minute to choose.", menu: CreateCoupMenu(p), menuTo: p.Id);
+                            WaitForChoice(true);
+                            target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                            Send($"{p.Name} has chosen to Coup {target.Name}!  {target.Name} please choose a card to lose.");
+                            break;
+                        case Action.Tax:
+                            Send($"{p.Name} has chosen to Tax (3 coins) with their Duke.  Does anyone wish to call bluff?", menu: CreateBluffMenu(), menuNot: p.Id);
+                            break;
+                        case Action.Assassinate:
+                            break;
+                        case Action.Exchange:
+                            break;
+                        case Action.Steal:
+                            break;
+                        case Action.BlockSteal:
+                            break;
+                        case Action.BlockAssassin:
+                            break;
+                        case Action.BlockForeignAid:
+                            break;
+                        case Action.None:
+                            break;
+                    }
+
+                    ChoiceMade = Action.None;
                 }
             }
         }
 
-
-
-        public void TellCards(Player p)
+        /// <summary>
+        /// Sleeps until a choice has been made
+        /// </summary>
+        /// <param name="timeToChoose">Time in half seconds to choose</param>
+        /// <returns>Whether or not a choice was actually made</returns>
+        private Action WaitForChoice(bool choosingPlayer = false, int timeToChoose = 120)
         {
-            Send(p.Cards.Aggregate("Your cards:\n", (a, b) => a + "\n" + b.Name), p.Id);
+            while (choosingPlayer ? ChoiceTarget == 0 : ChoiceMade == Action.None && timeToChoose > 0)
+            {
+                Thread.Sleep(500);
+                timeToChoose--;
+            }
+            return ChoiceMade;
         }
 
 
+        #region Menus
+        public InlineKeyboardMarkup CreateBluffMenu()
+        {
+            return new InlineKeyboardMarkup(new[]
+            {
+                new InlineKeyboardButton("Call Bluff", $"bluff|{GameId}"),
+                new InlineKeyboardButton("Allow", $"allow|{GameId}")
+            });
+        }
+        public InlineKeyboardMarkup CreateActionMenu(Player p)
+        {
+            //seed choices with all actions
+            var choices = Enum.GetValues(typeof(Action)).Cast<Action>().Where(x => !x.ToString().StartsWith("Block") && x != Action.None).ToList();
+            //remove actions player doesn't have the coins for
+            if (p.Coins < 3) choices.Remove(Action.Assassinate);
+            if (p.Coins < 7) choices.Remove(Action.Coup);
+            //return choice menu
+            return new InlineKeyboardMarkup(choices.Select(x => new[] { new InlineKeyboardButton(x.ToString(), $"{x}|{GameId}") }).ToArray());
+        }
+        public InlineKeyboardMarkup CreateCoupMenu(Player p)
+        {
+            var choices = Players.Where(x => x.Id != p.Id).Select(x => new[] { new InlineKeyboardButton(x.Name, $"choose|{GameId}|{x.Id}") }).ToArray();
+            return new InlineKeyboardMarkup(choices);
+        }
+        #endregion
 
         #region Communications
-        private IEnumerable<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false)
+        public void TellCards(Player p)
+        {
+            Send(p.Cards.Aggregate("Your cards:\n", (a, b) => a + "\n" + b.Name), p.Id, newMsg: true).ToList();
+        }
+        private List<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false, int menuTo = 0, int menuNot = 0)
         {
             var result = new List<Message>();
             if (id == 0)
@@ -128,9 +235,11 @@ namespace CoupForTelegram
                     id = ChatId;
                 else
                 {
+
                     foreach (var p in Players)
                     {
-                        yield return Send(message, p.Id, clearKeyboard, menu, newMsg).First();
+                        var newMenu = p.Id == menuTo && p.Id != menuNot ? menu : null;
+                        result.AddRange(Send(message, p.Id, clearKeyboard, newMenu, newMsg));
                     }
                 }
             }
@@ -170,8 +279,9 @@ namespace CoupForTelegram
                 {
 
                 }
-                yield return r;
+                result.Add(r);
             }
+            return result;
         }
         #endregion
     }
