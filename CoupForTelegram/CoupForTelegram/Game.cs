@@ -163,7 +163,7 @@ namespace CoupForTelegram
                             break;
 
                         case Action.ForeignAid:
-                            if (PlayerMadeBlockableAction(p, choice))
+                            if (PlayerMadeBlockableAction(p, choice, cardUsed: "Ambassador"))
                             {
                                 LastMenu = null;
                                 Send($"{p.Name.ToBold()} was not blocked, and has gained two coins.");
@@ -361,16 +361,20 @@ namespace CoupForTelegram
                     break;
                 case Action.Assassinate:
                     aMsg = $"{p.Name.ToBold()} has chosen to assassinate {t.Name.ToBold()} [Assassin]. Does anyone want to block / call bluff?";
+                    cardUsed = "Assassin";
                     canBlock = true;
                     break;
                 case Action.Tax:
                     aMsg = $"{p.Name.ToBold()} has chosen to take tax (3 coins) [Duke]. Does anyone want to call bluff?";
+                    cardUsed = "Duke";
                     break;
                 case Action.Exchange:
                     aMsg = $"{p.Name.ToBold()} has chosen to exchange cards with the deck [Ambassador]. Does anyone want to call bluff?";
+                    cardUsed = "Ambassador";
                     break;
                 case Action.Steal:
                     aMsg = $"{p.Name.ToBold()} has chosen to steal from {t.Name.ToBold()} [Captain]. Does anyone want to block / call bluff?";
+                    cardUsed = "Captain";
                     canBlock = true;
                     break;
                 case Action.BlockSteal:
