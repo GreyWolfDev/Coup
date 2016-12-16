@@ -28,12 +28,25 @@ namespace CoupForTelegram
         internal static Random R = new Random();
 
         internal static List<Game> Games = new List<Game>();
+        internal static int GamesPlayed = 0;
         internal static DateTime StartTime = DateTime.UtcNow;
         static void Main(string[] args)
         {
             new Thread(Bot.Initialize).Start();
             new Thread(Cleaner).Start();
+            new Thread(Monitor).Start();
             Thread.Sleep(-1);
+        }
+
+        static void Monitor()
+        {
+            while (true)
+            {
+                var msg = $"Games: {Games.Count()}\tPlayers: {Games.Sum(x => x.Players.Count())}\nTotal Games Played: {GamesPlayed}\nUptime: {DateTime.UtcNow - StartTime}";
+                Console.Clear();
+                Console.WriteLine(msg);
+                Thread.Sleep(5000);
+            }
         }
 
         static void Cleaner()

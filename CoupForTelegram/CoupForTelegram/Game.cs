@@ -92,10 +92,11 @@ namespace CoupForTelegram
             Send("Game is starting!");
             if (Players.Count < 2)
             {
-                //end the game
-                //TODO cancel game
+                Send("Not enough players to start the game..");
+                State = GameState.Ended;
+                return;
             }
-
+            Program.GamesPlayed++;
             State = GameState.Initializing;
 
             //hand out cards
