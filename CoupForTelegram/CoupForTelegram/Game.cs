@@ -10,6 +10,7 @@ using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using Action = CoupForTelegram.Models.Action;
 
+
 namespace CoupForTelegram
 {
     public class Game
@@ -18,7 +19,7 @@ namespace CoupForTelegram
         public long ChatId;
         public List<Card> Cards = CardHelper.GenerateCards();
         public List<Card> Graveyard = new List<Card>();
-        public List<Player> Players = new List<Player>();
+        public List<CPlayer> Players = new List<CPlayer>();
         public GameState State = GameState.Joining;
         public int LastMessageId = 0;
         public string LastMessageSent = "";
@@ -53,14 +54,16 @@ namespace CoupForTelegram
         {
             if (u == null)
             {
-                Players.Add(new Player { Id = 32432, Name = "Test" });
+                Players.Add(new CPlayer { Id = 32432, Name = "Test" });
                 StartGame();
                 return 0;
             }
-            Player p = null;
+            CPlayer p = null;
             if (!Players.Any(x => x.Id == u.Id))
             {
-                p = new Player { Id = u.Id, Name = (u.FirstName + " " + u.LastName).Trim(), TeleUser = u };
+                p = new CPlayer { Id = u.Id, Name = (u.FirstName + " " + u.LastName).Trim(), TeleUser = u };
+                //check for player in database, add if needed
+
                 Players.Add(p);
             }
             else
@@ -151,9 +154,9 @@ namespace CoupForTelegram
                     }
                     var choice = WaitForChoice(ChoiceType.Action);
                     Console.WriteLine($"{p.Name} has chosen to {ChoiceMade}");
-                    Player target;
-                    Player blocker;
-                    Player bluffer;
+                    CPlayer target;
+                    CPlayer blocker;
+                    CPlayer bluffer;
                     switch (choice)
                     {
                         //DONE
@@ -183,7 +186,7 @@ namespace CoupForTelegram
                                 PlayerLoseCard(target, target.Cards.First());
                                 //Graveyard.Add(target.Cards.First());
                                 target.Cards.Clear();
-                                
+
                                 Send($"{target.Name.ToBold()}, you have been couped.  You are out of cards, and therefore out of the game!");
                             }
                             else
@@ -346,11 +349,11 @@ namespace CoupForTelegram
             }
         }
 
-        private bool PlayerMadeBlockableAction(Player p, Action a, Player t = null, string cardUsed = "")
+        private bool PlayerMadeBlockableAction(CPlayer p, Action a, CPlayer t = null, string cardUsed = "")
         {
             //TODO finish this up.
             var aMsg = "";
-            Player bluffer = null, blocker = null, bluffBlock = null;
+            CPlayer bluffer = null, blocker = null, bluffBlock = null;
             bool canBlock = false;
             bool canBluff = true;
             switch (a)
@@ -489,7 +492,7 @@ namespace CoupForTelegram
             }
         }
 
-        private void PlayerLoseCard(Player p, Card card = null)
+        private void PlayerLoseCard(CPlayer p, Card card = null)
         {
             //send menu
             if (card == null)
@@ -500,7 +503,7 @@ namespace CoupForTelegram
                                 });
                 Send($"Please choose a card to lose", p.Id, menu: menu, newMsg: true, menuTo: p.Id);
                 WaitForChoice(ChoiceType.Card);
-                
+
                 if (CardToLose == "")
                     card = p.Cards.First();
                 else
@@ -512,13 +515,13 @@ namespace CoupForTelegram
             Send($"{p.Name.ToBold()} has lost {card.Name.ToBold()}.  It is now in the graveyard.");
         }
 
-        private bool PlayerCanDoAction(Action a, Player p)
+        private bool PlayerCanDoAction(Action a, CPlayer p)
         {
             return p.Cards.Any(x => x.ActionsAllowed.Contains(a));
         }
 
         #region Menus
-        public InlineKeyboardMarkup CreateCardMenu(Player p)
+        public InlineKeyboardMarkup CreateCardMenu(CPlayer p)
         {
             return new InlineKeyboardMarkup(new[] { p.Cards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray() });
         }
@@ -544,7 +547,7 @@ namespace CoupForTelegram
             return new InlineKeyboardMarkup(choices.ToArray());
 
         }
-        public InlineKeyboardMarkup CreateActionMenu(Player p)
+        public InlineKeyboardMarkup CreateActionMenu(CPlayer p)
         {
             //seed choices with all actions
             var choices = Enum.GetValues(typeof(Action)).Cast<Action>().Where(x => !x.ToString().StartsWith("Block") && x != Action.None).ToList();
@@ -554,7 +557,7 @@ namespace CoupForTelegram
             //return choice menu
             return new InlineKeyboardMarkup(choices.Select(x => new[] { new InlineKeyboardButton(x.ToString(), $"{x}|{GameId}") }).ToArray());
         }
-        public InlineKeyboardMarkup CreateTargetMenu(Player p)
+        public InlineKeyboardMarkup CreateTargetMenu(CPlayer p)
         {
             var choices = Players.Where(x => x.Id != p.Id && x.Cards.Count() > 0).Select(x => new[] { new InlineKeyboardButton(x.Name, $"choose|{GameId}|{x.Id}") }).ToArray();
             return new InlineKeyboardMarkup(choices);
@@ -562,7 +565,7 @@ namespace CoupForTelegram
         #endregion
 
         #region Communications
-        public void TellCards(Player p)
+        public void TellCards(CPlayer p)
         {
             Send(p.Cards.Aggregate("Your cards:\n", (a, b) => a + "\n" + b.Name), p.Id, newMsg: true).ToList();
         }
@@ -582,7 +585,7 @@ namespace CoupForTelegram
                             newMenu = null;
                         if (menuTo != 0 && menuTo != p.Id)
                             newMenu = null;
-                        
+
                         result.AddRange(Send(message, p.Id, clearKeyboard, newMenu, newMsg));
                     }
                 }

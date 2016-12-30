@@ -7,7 +7,7 @@ using Telegram.Bot.Types;
 
 namespace CoupForTelegram.Models
 {
-    public class Player
+    public class CPlayer
     {
         public int Id { get; set; }
         public User TeleUser { get; set; }

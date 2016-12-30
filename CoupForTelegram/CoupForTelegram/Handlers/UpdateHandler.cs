@@ -27,10 +27,11 @@ namespace CoupForTelegram.Handlers
             switch (cmd)
             {
                 case "help":
-
+                    //TODO add some help
                     break;
                 case "start":
                     //check for gameid
+                    Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     try
                     {
                         var id = int.Parse(m.Text.Split(' ')[1]);
@@ -62,6 +63,8 @@ namespace CoupForTelegram.Handlers
                     }
                     catch
                     {
+                        //no game / parameter
+                        Bot.SendAsync("Well hi there!  Would you like to play a game?\r\nHow about a nice game of tic tac toe?\r\n....Global Thermonuclear War it is.  Just kidding!  Use /newgame to play a game of Coup with your friends, or complete strangers!", m.From.Id);
 
                     }
                     break;
@@ -69,6 +72,7 @@ namespace CoupForTelegram.Handlers
 
                     break;
                 case "newgame":
+                    Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     //check to see if an existing game is already being played.
                     // if group, just look for a group game with the chat id
                     // if PM, look for a game with the user as one of the players (alive)
@@ -122,7 +126,7 @@ namespace CoupForTelegram.Handlers
                 cmd = cmd.Split('|')[0];
             Game g;
             int id;
-            Player p;
+            CPlayer p;
 
             Models.Action a;
             if (Enum.TryParse(cmd, out a))
@@ -283,7 +287,7 @@ namespace CoupForTelegram.Handlers
                 case "start":
                     id = int.Parse(c.Data.Split('|')[1]);
                     g = Program.Games.FirstOrDefault(x => x.GameId == id);
-                    g.StartGame();
+                    g?.StartGame();
                     break;
 
             }

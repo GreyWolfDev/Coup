@@ -46,7 +46,7 @@ namespace CoupForTelegram.Helpers
             return str.Replace("&", "&amp;").Replace("<", "&lt;").Replace(">", "&gt;").Replace("\"", "&quot;");
         }
 
-        public static string GetName(this Player player, bool menu = false)
+        public static string GetName(this CPlayer player, bool menu = false)
         {
             if (menu)
                 return player.Name;

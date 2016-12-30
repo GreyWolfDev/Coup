@@ -71,6 +71,11 @@
     <None Include="App.config" />
     <None Include="packages.config" />
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <ProjectReference Include="..\Database\Database.csproj">
+      <Project>{7588a348-a65c-4d0e-9ae7-4a3a7deac02f}</Project>
+      <Name>Database</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

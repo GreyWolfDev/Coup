@@ -40,6 +40,7 @@ namespace CoupForTelegram
 
         static void Monitor()
         {
+            return;
             while (true)
             {
                 var msg = $"Games: {Games.Count()}\tPlayers: {Games.Sum(x => x.Players.Count())}\nTotal Games Played: {GamesPlayed}\nUptime: {DateTime.UtcNow - StartTime}";

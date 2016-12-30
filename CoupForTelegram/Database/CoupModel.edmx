@@ -1,0 +1,471 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+  <!-- EF Runtime content -->
+  <edmx:Runtime>
+    <!-- SSDL content -->
+    <edmx:StorageModels>
+      <Schema Namespace="coupModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+        <EntityType Name="Bluff">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="BlufferId" Type="int" Nullable="false" />
+          <Property Name="CardBluffed" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="BluffCalled" Type="bit" Nullable="false" />
+          <Property Name="CalledById" Type="int" />
+          <Property Name="GameId" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="ChatGroup">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Name" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="TelegramId" Type="bigint" Nullable="false" />
+          <Property Name="Username" Type="nvarchar(max)" />
+          <Property Name="Language" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Created" Type="datetime" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Game">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="GameType" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="GroupId" Type="int" />
+          <Property Name="TimeStarted" Type="datetime" />
+          <Property Name="TimeEnded" Type="datetime" />
+        </EntityType>
+        <EntityType Name="GamePlayer">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="PlayerId" Type="int" Nullable="false" />
+          <Property Name="StartingCards" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="EndingCards" Type="nvarchar(max)" />
+          <Property Name="Won" Type="bit" Nullable="false" />
+          <Property Name="LookedAtCardsTurn" Type="int" />
+          <Property Name="CoinsCollected" Type="int" Nullable="false" />
+          <Property Name="CoinsStolen" Type="int" Nullable="false" />
+          <Property Name="ActionsBlocked" Type="int" Nullable="false" />
+          <Property Name="BluffsCalled" Type="int" Nullable="false" />
+          <Property Name="PlayersCouped" Type="int" Nullable="false" />
+          <Property Name="PlayersAssassinated" Type="int" Nullable="false" />
+          <Property Name="GameId" Type="int" Nullable="false" />
+        </EntityType>
+        <EntityType Name="Player">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="int" StoreGeneratedPattern="Identity" Nullable="false" />
+          <Property Name="Name" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="TelegramId" Type="int" Nullable="false" />
+          <Property Name="Username" Type="nvarchar(max)" />
+          <Property Name="Created" Type="datetime" Nullable="false" />
+          <Property Name="Language" Type="nvarchar(max)" Nullable="false" />
+          <Property Name="Achievements" Type="bigint" Nullable="false" />
+        </EntityType>
+        <Association Name="FK__Bluff__BlufferId__36B12243">
+          <End Role="Player" Type="Self.Player" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="Bluff" Type="Self.Bluff" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Player">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Bluff">
+              <PropertyRef Name="BlufferId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__Bluff__CalledByI__38996AB5">
+          <End Role="Player" Type="Self.Player" Multiplicity="0..1" />
+          <End Role="Bluff" Type="Self.Bluff" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Player">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Bluff">
+              <PropertyRef Name="CalledById" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__Bluff__GameId__3D5E1FD2">
+          <End Role="Game" Type="Self.Game" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="Bluff" Type="Self.Bluff" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Game">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Bluff">
+              <PropertyRef Name="GameId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__Game__GroupId__3A81B327">
+          <End Role="ChatGroup" Type="Self.ChatGroup" Multiplicity="0..1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="Game" Type="Self.Game" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ChatGroup">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Game">
+              <PropertyRef Name="GroupId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__GamePlaye__GameI__3C69FB99">
+          <End Role="Game" Type="Self.Game" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="GamePlayer" Type="Self.GamePlayer" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Game">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="GamePlayer">
+              <PropertyRef Name="GameId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__GamePlaye__Playe__3B75D760">
+          <End Role="Player" Type="Self.Player" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="GamePlayer" Type="Self.GamePlayer" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Player">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="GamePlayer">
+              <PropertyRef Name="PlayerId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityContainer Name="coupModelStoreContainer">
+          <EntitySet Name="Bluff" EntityType="Self.Bluff" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="ChatGroup" EntityType="Self.ChatGroup" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Game" EntityType="Self.Game" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="GamePlayer" EntityType="Self.GamePlayer" Schema="dbo" store:Type="Tables" />
+          <EntitySet Name="Player" EntityType="Self.Player" Schema="dbo" store:Type="Tables" />
+          <AssociationSet Name="FK__Bluff__BlufferId__36B12243" Association="Self.FK__Bluff__BlufferId__36B12243">
+            <End Role="Player" EntitySet="Player" />
+            <End Role="Bluff" EntitySet="Bluff" />
+          </AssociationSet>
+          <AssociationSet Name="FK__Bluff__CalledByI__38996AB5" Association="Self.FK__Bluff__CalledByI__38996AB5">
+            <End Role="Player" EntitySet="Player" />
+            <End Role="Bluff" EntitySet="Bluff" />
+          </AssociationSet>
+          <AssociationSet Name="FK__Bluff__GameId__3D5E1FD2" Association="Self.FK__Bluff__GameId__3D5E1FD2">
+            <End Role="Game" EntitySet="Game" />
+            <End Role="Bluff" EntitySet="Bluff" />
+          </AssociationSet>
+          <AssociationSet Name="FK__Game__GroupId__3A81B327" Association="Self.FK__Game__GroupId__3A81B327">
+            <End Role="ChatGroup" EntitySet="ChatGroup" />
+            <End Role="Game" EntitySet="Game" />
+          </AssociationSet>
+          <AssociationSet Name="FK__GamePlaye__GameI__3C69FB99" Association="Self.FK__GamePlaye__GameI__3C69FB99">
+            <End Role="Game" EntitySet="Game" />
+            <End Role="GamePlayer" EntitySet="GamePlayer" />
+          </AssociationSet>
+          <AssociationSet Name="FK__GamePlaye__Playe__3B75D760" Association="Self.FK__GamePlaye__Playe__3B75D760">
+            <End Role="Player" EntitySet="Player" />
+            <End Role="GamePlayer" EntitySet="GamePlayer" />
+          </AssociationSet>
+        </EntityContainer>
+      </Schema>
+    </edmx:StorageModels>
+    <!-- CSDL content -->
+    <edmx:ConceptualModels>
+      <Schema Namespace="coupModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
+        <EntityType Name="Bluff">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="BlufferId" Type="Int32" Nullable="false" />
+          <Property Name="CardBluffed" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="BluffCalled" Type="Boolean" Nullable="false" />
+          <Property Name="CalledById" Type="Int32" />
+          <Property Name="GameId" Type="Int32" Nullable="false" />
+          <NavigationProperty Name="MadeBy" Relationship="Self.FK__Bluff__BlufferId__36B12243" FromRole="Bluff" ToRole="Player" />
+          <NavigationProperty Name="CalledBy" Relationship="Self.FK__Bluff__CalledByI__38996AB5" FromRole="Bluff" ToRole="Player" />
+          <NavigationProperty Name="Game" Relationship="Self.FK__Bluff__GameId__3D5E1FD2" FromRole="Bluff" ToRole="Game" />
+        </EntityType>
+        <EntityType Name="ChatGroup">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Name" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="TelegramId" Type="Int64" Nullable="false" />
+          <Property Name="Username" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Language" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" />
+          <NavigationProperty Name="Games" Relationship="Self.FK__Game__GroupId__3A81B327" FromRole="ChatGroup" ToRole="Game" />
+        </EntityType>
+        <EntityType Name="Game">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="GameType" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="GroupId" Type="Int32" />
+          <Property Name="TimeStarted" Type="DateTime" Precision="3" />
+          <Property Name="TimeEnded" Type="DateTime" Precision="3" />
+          <NavigationProperty Name="Bluffs" Relationship="Self.FK__Bluff__GameId__3D5E1FD2" FromRole="Game" ToRole="Bluff" />
+          <NavigationProperty Name="ChatGroup" Relationship="Self.FK__Game__GroupId__3A81B327" FromRole="Game" ToRole="ChatGroup" />
+          <NavigationProperty Name="GamePlayers" Relationship="Self.FK__GamePlaye__GameI__3C69FB99" FromRole="Game" ToRole="GamePlayer" />
+        </EntityType>
+        <EntityType Name="GamePlayer">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="PlayerId" Type="Int32" Nullable="false" />
+          <Property Name="StartingCards" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="EndingCards" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Won" Type="Boolean" Nullable="false" />
+          <Property Name="LookedAtCardsTurn" Type="Int32" />
+          <Property Name="CoinsCollected" Type="Int32" Nullable="false" />
+          <Property Name="CoinsStolen" Type="Int32" Nullable="false" />
+          <Property Name="ActionsBlocked" Type="Int32" Nullable="false" />
+          <Property Name="BluffsCalled" Type="Int32" Nullable="false" />
+          <Property Name="PlayersCouped" Type="Int32" Nullable="false" />
+          <Property Name="PlayersAssassinated" Type="Int32" Nullable="false" />
+          <Property Name="GameId" Type="Int32" Nullable="false" />
+          <NavigationProperty Name="Game" Relationship="Self.FK__GamePlaye__GameI__3C69FB99" FromRole="GamePlayer" ToRole="Game" />
+          <NavigationProperty Name="Player" Relationship="Self.FK__GamePlaye__Playe__3B75D760" FromRole="GamePlayer" ToRole="Player" />
+        </EntityType>
+        <EntityType Name="Player">
+          <Key>
+            <PropertyRef Name="Id" />
+          </Key>
+          <Property Name="Id" Type="Int32" Nullable="false" annotation:StoreGeneratedPattern="Identity" />
+          <Property Name="Name" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="TelegramId" Type="Int32" Nullable="false" />
+          <Property Name="Username" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" />
+          <Property Name="Created" Type="DateTime" Nullable="false" Precision="3" />
+          <Property Name="Language" Type="String" MaxLength="Max" FixedLength="false" Unicode="true" Nullable="false" />
+          <Property Name="Achievements" Type="Int64" Nullable="false" />
+          <NavigationProperty Name="BluffsMade" Relationship="Self.FK__Bluff__BlufferId__36B12243" FromRole="Player" ToRole="Bluff" />
+          <NavigationProperty Name="BluffsCalled" Relationship="Self.FK__Bluff__CalledByI__38996AB5" FromRole="Player" ToRole="Bluff" />
+          <NavigationProperty Name="GamePlayers" Relationship="Self.FK__GamePlaye__Playe__3B75D760" FromRole="Player" ToRole="GamePlayer" />
+        </EntityType>
+        <Association Name="FK__Bluff__BlufferId__36B12243">
+          <End Role="Player" Type="Self.Player" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="Bluff" Type="Self.Bluff" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Player">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Bluff">
+              <PropertyRef Name="BlufferId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__Bluff__CalledByI__38996AB5">
+          <End Role="Player" Type="Self.Player" Multiplicity="0..1" />
+          <End Role="Bluff" Type="Self.Bluff" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Player">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Bluff">
+              <PropertyRef Name="CalledById" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__Bluff__GameId__3D5E1FD2">
+          <End Role="Game" Type="Self.Game" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="Bluff" Type="Self.Bluff" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Game">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Bluff">
+              <PropertyRef Name="GameId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__Game__GroupId__3A81B327">
+          <End Role="ChatGroup" Type="Self.ChatGroup" Multiplicity="0..1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="Game" Type="Self.Game" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="ChatGroup">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="Game">
+              <PropertyRef Name="GroupId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__GamePlaye__GameI__3C69FB99">
+          <End Role="Game" Type="Self.Game" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="GamePlayer" Type="Self.GamePlayer" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Game">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="GamePlayer">
+              <PropertyRef Name="GameId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <Association Name="FK__GamePlaye__Playe__3B75D760">
+          <End Role="Player" Type="Self.Player" Multiplicity="1">
+            <OnDelete Action="Cascade" />
+          </End>
+          <End Role="GamePlayer" Type="Self.GamePlayer" Multiplicity="*" />
+          <ReferentialConstraint>
+            <Principal Role="Player">
+              <PropertyRef Name="Id" />
+            </Principal>
+            <Dependent Role="GamePlayer">
+              <PropertyRef Name="PlayerId" />
+            </Dependent>
+          </ReferentialConstraint>
+        </Association>
+        <EntityContainer Name="CoupContext" annotation:LazyLoadingEnabled="true">
+          <EntitySet Name="Bluffs" EntityType="Self.Bluff" />
+          <EntitySet Name="ChatGroups" EntityType="Self.ChatGroup" />
+          <EntitySet Name="Games" EntityType="Self.Game" />
+          <EntitySet Name="GamePlayers" EntityType="Self.GamePlayer" />
+          <EntitySet Name="Players" EntityType="Self.Player" />
+          <AssociationSet Name="FK__Bluff__BlufferId__36B12243" Association="Self.FK__Bluff__BlufferId__36B12243">
+            <End Role="Player" EntitySet="Players" />
+            <End Role="Bluff" EntitySet="Bluffs" />
+          </AssociationSet>
+          <AssociationSet Name="FK__Bluff__CalledByI__38996AB5" Association="Self.FK__Bluff__CalledByI__38996AB5">
+            <End Role="Player" EntitySet="Players" />
+            <End Role="Bluff" EntitySet="Bluffs" />
+          </AssociationSet>
+          <AssociationSet Name="FK__Bluff__GameId__3D5E1FD2" Association="Self.FK__Bluff__GameId__3D5E1FD2">
+            <End Role="Game" EntitySet="Games" />
+            <End Role="Bluff" EntitySet="Bluffs" />
+          </AssociationSet>
+          <AssociationSet Name="FK__Game__GroupId__3A81B327" Association="Self.FK__Game__GroupId__3A81B327">
+            <End Role="ChatGroup" EntitySet="ChatGroups" />
+            <End Role="Game" EntitySet="Games" />
+          </AssociationSet>
+          <AssociationSet Name="FK__GamePlaye__GameI__3C69FB99" Association="Self.FK__GamePlaye__GameI__3C69FB99">
+            <End Role="Game" EntitySet="Games" />
+            <End Role="GamePlayer" EntitySet="GamePlayers" />
+          </AssociationSet>
+          <AssociationSet Name="FK__GamePlaye__Playe__3B75D760" Association="Self.FK__GamePlaye__Playe__3B75D760">
+            <End Role="Player" EntitySet="Players" />
+            <End Role="GamePlayer" EntitySet="GamePlayers" />
+          </AssociationSet>
+        </EntityContainer>
+      </Schema>
+    </edmx:ConceptualModels>
+    <!-- C-S mapping content -->
+    <edmx:Mappings>
+      <Mapping Space="C-S" xmlns="http://schemas.microsoft.com/ado/2009/11/mapping/cs">
+        <EntityContainerMapping StorageEntityContainer="coupModelStoreContainer" CdmEntityContainer="CoupContext">
+          <EntitySetMapping Name="Bluffs">
+            <EntityTypeMapping TypeName="coupModel.Bluff">
+              <MappingFragment StoreEntitySet="Bluff">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="BlufferId" ColumnName="BlufferId" />
+                <ScalarProperty Name="CardBluffed" ColumnName="CardBluffed" />
+                <ScalarProperty Name="BluffCalled" ColumnName="BluffCalled" />
+                <ScalarProperty Name="CalledById" ColumnName="CalledById" />
+                <ScalarProperty Name="GameId" ColumnName="GameId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="ChatGroups">
+            <EntityTypeMapping TypeName="coupModel.ChatGroup">
+              <MappingFragment StoreEntitySet="ChatGroup">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="TelegramId" ColumnName="TelegramId" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Language" ColumnName="Language" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Games">
+            <EntityTypeMapping TypeName="coupModel.Game">
+              <MappingFragment StoreEntitySet="Game">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="GameType" ColumnName="GameType" />
+                <ScalarProperty Name="GroupId" ColumnName="GroupId" />
+                <ScalarProperty Name="TimeStarted" ColumnName="TimeStarted" />
+                <ScalarProperty Name="TimeEnded" ColumnName="TimeEnded" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="GamePlayers">
+            <EntityTypeMapping TypeName="coupModel.GamePlayer">
+              <MappingFragment StoreEntitySet="GamePlayer">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="PlayerId" ColumnName="PlayerId" />
+                <ScalarProperty Name="StartingCards" ColumnName="StartingCards" />
+                <ScalarProperty Name="EndingCards" ColumnName="EndingCards" />
+                <ScalarProperty Name="Won" ColumnName="Won" />
+                <ScalarProperty Name="LookedAtCardsTurn" ColumnName="LookedAtCardsTurn" />
+                <ScalarProperty Name="CoinsCollected" ColumnName="CoinsCollected" />
+                <ScalarProperty Name="CoinsStolen" ColumnName="CoinsStolen" />
+                <ScalarProperty Name="ActionsBlocked" ColumnName="ActionsBlocked" />
+                <ScalarProperty Name="BluffsCalled" ColumnName="BluffsCalled" />
+                <ScalarProperty Name="PlayersCouped" ColumnName="PlayersCouped" />
+                <ScalarProperty Name="PlayersAssassinated" ColumnName="PlayersAssassinated" />
+                <ScalarProperty Name="GameId" ColumnName="GameId" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+          <EntitySetMapping Name="Players">
+            <EntityTypeMapping TypeName="coupModel.Player">
+              <MappingFragment StoreEntitySet="Player">
+                <ScalarProperty Name="Id" ColumnName="Id" />
+                <ScalarProperty Name="Name" ColumnName="Name" />
+                <ScalarProperty Name="TelegramId" ColumnName="TelegramId" />
+                <ScalarProperty Name="Username" ColumnName="Username" />
+                <ScalarProperty Name="Created" ColumnName="Created" />
+                <ScalarProperty Name="Language" ColumnName="Language" />
+                <ScalarProperty Name="Achievements" ColumnName="Achievements" />
+              </MappingFragment>
+            </EntityTypeMapping>
+          </EntitySetMapping>
+        </EntityContainerMapping>
+      </Mapping>
+    </edmx:Mappings>
+  </edmx:Runtime>
+  <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <Connection>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="MetadataArtifactProcessing" Value="EmbedInOutputAssembly" />
+      </DesignerInfoPropertySet>
+    </Connection>
+    <Options>
+      <DesignerInfoPropertySet>
+        <DesignerProperty Name="ValidateOnBuild" Value="true" />
+        <DesignerProperty Name="EnablePluralization" Value="true" />
+        <DesignerProperty Name="IncludeForeignKeysInModel" Value="true" />
+        <DesignerProperty Name="UseLegacyProvider" Value="false" />
+        <DesignerProperty Name="CodeGenerationStrategy" Value="None" />
+      </DesignerInfoPropertySet>
+    </Options>
+    <!-- Diagram content (shape and connector positions) -->
+    <Diagrams></Diagrams>
+  </Designer>
+</edmx:Edmx>

@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="utf-8"?>
+<edmx:Edmx Version="3.0" xmlns:edmx="http://schemas.microsoft.com/ado/2009/11/edmx">
+ <!-- EF Designer content (DO NOT EDIT MANUALLY BELOW HERE) -->
+  <edmx:Designer xmlns="http://schemas.microsoft.com/ado/2009/11/edmx">
+    <!-- Diagram content (shape and connector positions) -->
+    <edmx:Diagrams>
+      <Diagram DiagramId="3b20c398de38480a959b703c7564b835" Name="Diagram1">
+        <EntityTypeShape EntityType="coupModel.Bluff" Width="1.5" PointX="2.5" PointY="1.125" IsExpanded="true" />
+        <EntityTypeShape EntityType="coupModel.ChatGroup" Width="1.5" PointX="0.75" PointY="4.125" IsExpanded="true" />
+        <EntityTypeShape EntityType="coupModel.Game" Width="1.5" PointX="4.375" PointY="1.125" IsExpanded="true" />
+        <EntityTypeShape EntityType="coupModel.GamePlayer" Width="1.5" PointX="6.375" PointY="0.5" IsExpanded="true" />
+        <EntityTypeShape EntityType="coupModel.Player" Width="1.5" PointX="0.5" PointY="0.5" IsExpanded="true" />
+        <AssociationConnector Association="coupModel.FK__Bluff__BlufferId__36B12243" ManuallyRouted="false" />
+        <AssociationConnector Association="coupModel.FK__Bluff__CalledByI__38996AB5" ManuallyRouted="false" />
+        <AssociationConnector Association="coupModel.FK__Bluff__GameId__3D5E1FD2" ManuallyRouted="false" />
+        <AssociationConnector Association="coupModel.FK__Game__GroupId__3A81B327" ManuallyRouted="false" />
+        <AssociationConnector Association="coupModel.FK__GamePlaye__GameI__3C69FB99" ManuallyRouted="false" />
+        <AssociationConnector Association="coupModel.FK__GamePlaye__Playe__3B75D760" ManuallyRouted="false" />
+      </Diagram>
+    </edmx:Diagrams>
+  </edmx:Designer>
+</edmx:Edmx>
