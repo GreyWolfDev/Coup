@@ -5,6 +5,7 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
@@ -115,8 +116,10 @@ namespace CoupForTelegram.Handlers
                         Bot.Api.SendTextMessageAsync(m.Chat.Id, "You've chosen to start a new game.  Do you want to play in private with friends, private with random players, or in a group?", replyMarkup: new InlineKeyboardMarkup(new InlineKeyboardButton[][] {
                         new InlineKeyboardButton[] { new InlineKeyboardButton("Private game - Friends", "spgf") },
                         new InlineKeyboardButton[] { new InlineKeyboardButton("Private game - Strangers", "spgs") },
-                        new InlineKeyboardButton[] { new InlineKeyboardButton("Group game", "sgg") }
+                        //new InlineKeyboardButton[] { new InlineKeyboardButton("Group game", "sgg") }
                         }));
+                        Thread.Sleep(500);
+                        Bot.SendAsync("Alternatively, you can start a game directly in a group", m.Chat.Id);
                     }
                     else
                     {
