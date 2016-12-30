@@ -28,6 +28,26 @@ namespace CoupForTelegram.Handlers
             //basic commands
             switch (cmd)
             {
+                case "stats":
+                    var stats = $"<b>Stats for {m.From.FirstName.FormatHTML()}</b>\n";
+                    using (var db = new CoupContext())
+                    {
+                        var p = db.Players.FirstOrDefault(x => x.TelegramId == m.From.Id);
+                        if (p == null) return;
+                        var gps = p.GamePlayers.ToList();
+                        stats += $"Games played: {gps.Count()}\n" +
+                            $"Games won: {gps.Count(x => x.Won)}\n" +
+                            $"Checks cards on turn: {gps.Average(x => x.LookedAtCardsTurn)}\n" +
+                            $"Total coins collected: {gps.Sum(x => x.CoinsCollected)}\n" +
+                            $"Total coins stolen: {gps.Sum(x => x.CoinsStolen)}\n" +
+                            $"Successful blocks: {gps.Sum(x => x.ActionsBlocked)}\n" +
+                            $"Successful bluffs: {gps.Sum(x => x.BluffsMade)}\n" +
+                            $"Bluffs called: {gps.Sum(x => x.BluffsCalled)}\n" +
+                            $"Coups made: {gps.Sum(x => x.PlayersCouped)}\n" +
+                            $"Assassinations: {gps.Sum(x => x.PlayersAssassinated)}";
+                        Bot.SendAsync(stats, m.Chat.Id);
+                    }
+                    break;
                 case "help":
                     //TODO add some help
                     break;
