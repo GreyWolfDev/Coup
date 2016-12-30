@@ -11,6 +11,8 @@ using CoupForTelegram.Handlers;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using Telegram.Bot.Types.Enums;
+using System.Reflection;
+using System.IO;
 
 namespace CoupForTelegram
 {
