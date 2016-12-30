@@ -21,5 +21,6 @@ namespace CoupForTelegram.Models
         public string Language { get; internal set; }
         public int DBPlayerId { get; internal set; }
         public int DBGamePlayerId { get; internal set; }
+        public bool HasCheckedCards { get; internal set; }
     }
 }

@@ -18,6 +18,7 @@ namespace CoupForTelegram
         public int GameId;
         public int DBGameId;
         public long ChatId;
+        public int Round = 0;
         public List<Card> Cards = CardHelper.GenerateCards();
         public List<Card> Graveyard = new List<Card>();
         public List<CPlayer> Players = new List<CPlayer>();
@@ -42,11 +43,36 @@ namespace CoupForTelegram
 
         public InlineKeyboardMarkup LastMenu { get; internal set; }
 
-        public Game(int id, User u, bool group, bool random, long chatid = 0)
+        public Game(int id, User u, bool group, bool random, Chat c = null)
         {
             GameId = id;
-            ChatId = chatid;
+            ChatId = c?.Id ?? 0;
             IsGroup = group;
+            if (IsGroup)
+            {
+                using (var db = new CoupContext())
+                {
+                    var grp = db.ChatGroups.FirstOrDefault(x => x.TelegramId == c.Id);
+                    if (grp == null)
+                    {
+                        grp = new ChatGroup
+                        {
+                            TelegramId = c.Id,
+                            Created = DateTime.UtcNow,
+                            Language = "English",
+                            Name = c.Title,
+                            Username = c.Username
+                        };
+                        db.ChatGroups.Add(grp);
+
+                    }
+
+                    grp.Name = c.Title;
+                    grp.Username = c.Username;
+
+                    db.SaveChanges();
+                }
+            }
             IsRandom = random;
             AddPlayer(u);
         }
@@ -176,6 +202,7 @@ namespace CoupForTelegram
 
             while (true)
             {
+                Round++;
                 //will use break to end the game
                 foreach (var p in Players)
                 {
@@ -364,6 +391,9 @@ namespace CoupForTelegram
                             var gp = GetDBGamePlayer(winner, db);
                             gp.Won = true;
                             gp.EndingCards = winner.Cards.Count() > 1 ? winner.Cards.Aggregate("", (a, b) => a + "," + b.Name) : winner.Cards.First().Name;
+
+                            var g = db.Games.Find(DBGameId);
+                            g.TimeEnded = DateTime.UtcNow;
                             db.SaveChanges();
                         }
                         Send($"{winner.GetName()} has won the game!", newMsg: true);
@@ -373,6 +403,16 @@ namespace CoupForTelegram
 
                 }
             }
+        }
+
+        internal void Concede(int id)
+        {
+            var p = Players.FirstOrDefault(x => x.Id == id);
+            if (p == null) return;
+            Graveyard.AddRange(p.Cards);
+            p.Cards.Clear();
+            Send($"{p.Name} has chosen to concede the game, and is out!");
+            ChoiceMade = Action.None;
         }
 
         private void SendMenu(CPlayer p)
@@ -387,7 +427,7 @@ namespace CoupForTelegram
             var menu = new InlineKeyboardMarkup(new[]
             {
                 new[] {
-                    new InlineKeyboardButton("Game Status",$"status|{GameId}"),
+                    new InlineKeyboardButton("Game Status",$"players|{GameId}"),
                     new InlineKeyboardButton("Graveyard",$"grave|{GameId}")
                 },
                 new[]

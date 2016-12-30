@@ -1,4 +1,6 @@
-﻿using CoupForTelegram.Models;
+﻿using CoupForTelegram.Helpers;
+using CoupForTelegram.Models;
+using Database;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -89,7 +91,7 @@ namespace CoupForTelegram.Handlers
                     else
                     {
                         //group game
-                        g = CreateGame(m.From, true, chatid: m.Chat.Id);
+                        g = CreateGame(m.From, true, c: m.Chat);
                         var menu = new InlineKeyboardMarkup(new[]
                                     {
                                         new InlineKeyboardButton("Join", "join|" + g.GameId.ToString()),
@@ -146,6 +148,74 @@ namespace CoupForTelegram.Handlers
 
             switch (cmd)
             {
+                case "players":
+                    id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g == null)
+                    {
+                        Bot.ReplyToCallback(c, "Game is no longer active!");
+                        break;
+                    }
+                    //player wants status
+                    var msg = g.Players.Aggregate("<b>Players</b>", (cur, b) => cur + $"\n{b.GetName()}: {b.Cards.Count} card(s), {b.Coins} coin(s)");
+                    Bot.ReplyToCallback(c, msg, false, false);
+                    break;
+                case "grave":
+                    id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g == null)
+                    {
+                        Bot.ReplyToCallback(c, "Game is no longer active!");
+                        break;
+                    }
+                    //player wants graveyard
+                    var grave = g.Graveyard.Aggregate("<b>Graveyard</b>", (cur, b) => cur + $"\n{b.Name}");
+                    Bot.ReplyToCallback(c, grave, false, false);
+                    break;
+                case "cards":
+                    id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g == null)
+                    {
+                        Bot.ReplyToCallback(c, "Game is no longer active!");
+                        break;
+                    }
+                    //player wants graveyard
+                    var player = g.Players.FirstOrDefault(x => x.Id == c.From.Id);
+
+                    var cards = player?.Cards.Aggregate("<b>Your cards</b>", (cur, b) => cur + $"\n{b.Name}");
+                    if (!player.HasCheckedCards)
+                    {
+                        using (var db = new CoupContext())
+                        {
+                            var dbp = db.Players.FirstOrDefault(x => x.TelegramId == c.From.Id);
+                            var gp = dbp?.GamePlayers.FirstOrDefault(x => x.GameId == g.DBGameId);
+                            if (gp != null)
+                            {
+                                gp.LookedAtCardsTurn = g.Round;
+                                db.SaveChanges();
+                            }
+                        }
+                        player.HasCheckedCards = true;
+                    }
+                    Bot.ReplyToCallback(c, cards, false, false);
+                    break;
+                case "concede":
+                    id = int.Parse(c.Data.Split('|')[1]);
+                    g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g == null)
+                    {
+                        Bot.ReplyToCallback(c, "Game is no longer active!");
+                        break;
+                    }
+                    if (g.Turn != c.From.Id)
+                    {
+                        Bot.ReplyToCallback(c, "Please concede on your turn only", false, false);
+                        break;
+                    }
+                    g.Concede(c.From.Id);
+                    Bot.ReplyToCallback(c, "Accepted");
+                    break;
                 case "card":
                     //player is losing a card
                     var cardStr = c.Data.Split('|')[2];
@@ -294,9 +364,9 @@ namespace CoupForTelegram.Handlers
 
         }
 
-        private static Game CreateGame(User u, bool group = false, bool random = false, long chatid = 0)
+        private static Game CreateGame(User u, bool group = false, bool random = false, Chat c = null)
         {
-            var g = new Game(GenerateGameId(), u, group, random, chatid);
+            var g = new Game(GenerateGameId(), u, group, random, c);
             Program.Games.Add(g);
             return g;
         }
