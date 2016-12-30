@@ -75,41 +75,62 @@ namespace CoupForTelegram
             }
             IsRandom = random;
             AddPlayer(u);
+            new Task(JoinTimer).Start();
+        }
+
+        private void JoinTimer()
+        {
+            var joinTime = 360; //3 minutes
+            while (true)
+            {
+                joinTime--;
+                if (Players.Count >= 6 || joinTime == 0)
+                {
+                    StartGame();
+                    return;
+                }
+                Thread.Sleep(500);
+            }
         }
 
         public int AddPlayer(User u)
         {
-            if (u == null)
+            if (Players.Count > 5)
             {
-                Players.Add(new CPlayer { Id = 32432, Name = "Test" });
-                StartGame();
-                return 0;
+                return 2; //game is full
             }
+
             CPlayer p = null;
             if (!Players.Any(x => x.Id == u.Id))
             {
                 p = new CPlayer { Id = u.Id, Name = (u.FirstName + " " + u.LastName).Trim(), TeleUser = u };
                 //check for player in database, add if needed
-                using (var db = new CoupContext())
+                //using (var db = new CoupContext())
+                //{
+                //    var pl = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
+                //    if (pl == null)
+                //    {
+                //        pl = new Player { TelegramId = p.Id, Created = DateTime.UtcNow, Language = "English" };
+                //        db.Players.Add(pl);
+                //    }
+                //    pl.Name = p.Name;
+                //    pl.Username = u.Username;
+                //    db.SaveChanges();
+                //}
+                try
                 {
-                    var pl = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
-                    if (pl == null)
-                    {
-                        pl = new Player { TelegramId = p.Id, Created = DateTime.UtcNow, Language = "English" };
-                        db.Players.Add(pl);
-                    }
-                    pl.Name = p.Name;
-                    pl.Username = u.Username;
-                    db.SaveChanges();
+                    Players.Add(p);
                 }
-                Players.Add(p);
+                catch (Exception e)
+                {
+                    Send($"{p.GetName()} unable to join: {e.Message}");
+                }
             }
             else
                 return 1;
             var name = p.GetName();
             Send($"{name} has joined the game");
-            if (Players.Count >= 6)
-                new Task(StartGame).Start();
+
             return 0;
         }
 
@@ -202,217 +223,253 @@ namespace CoupForTelegram
 
             while (true)
             {
-                Round++;
-                //will use break to end the game
-                foreach (var p in Players)
+                try
                 {
-                    if (p.Cards.Count() == 0)
-                        continue;
-                    Turn = p.Id;
-                    Send($"{p.GetName()}'s turn. {p.Name.ToBold()} has {p.Coins} coins.", newMsg: true).ToList();
-                    p.CallBluff = false;
-                    //it is the players turn.
-                    //first off, do they have to Coup?
-                    if (p.Coins >= 10)
+                    Round++;
+                    //will use break to end the game
+                    foreach (var p in Players)
                     {
-                        //Coup time!
-                        Send($"{p.GetName()} has 10 or more coins, and must Coup someone.");
-                        ChoiceMade = Action.Coup;
-                    }
-                    else
-                    {
-                        //ok, no, so get actions that they can make
-                        Send($"{p.Name.ToBold()} please choose an action.", menu: CreateActionMenu(p), menuTo: p.Id);
-                    }
-                    var choice = WaitForChoice(ChoiceType.Action);
-                    Console.WriteLine($"{p.Name} has chosen to {ChoiceMade}");
-                    CPlayer target;
-                    CPlayer blocker;
-                    CPlayer bluffer;
-                    switch (choice)
-                    {
-                        //DONE
-                        case Action.Income:
-                            LastMenu = null;
-                            Send($"{p.Name.ToBold()} has chosen to take income (1 coin).");
-                            DBAddValue(p, Models.ValueType.CoinsCollected);
-                            p.Coins++;
-                            break;
-
-                        case Action.ForeignAid:
-                            if (PlayerMadeBlockableAction(p, choice, cardUsed: "Ambassador"))
-                            {
+                        if (p.Cards.Count() == 0)
+                            continue;
+                        Turn = p.Id;
+                        Send($"{p.GetName()}'s turn. {p.Name.ToBold()} has {p.Coins} coins.", newMsg: true).ToList();
+                        p.CallBluff = false;
+                        //it is the players turn.
+                        //first off, do they have to Coup?
+                        if (p.Coins >= 10)
+                        {
+                            //Coup time!
+                            Send($"{p.GetName()} has 10 or more coins, and must Coup someone.");
+                            ChoiceMade = Action.Coup;
+                        }
+                        else
+                        {
+                            //ok, no, so get actions that they can make
+                            Send($"{p.Name.ToBold()} please choose an action.", menu: CreateActionMenu(p), menuTo: p.Id);
+                        }
+                        var choice = WaitForChoice(ChoiceType.Action);
+                        Console.WriteLine($"{p.Name} has chosen to {ChoiceMade}");
+                        CPlayer target;
+                        CPlayer blocker;
+                        CPlayer bluffer;
+                        switch (choice)
+                        {
+                            //DONE
+                            case Action.Income:
                                 LastMenu = null;
-                                Send($"{p.Name.ToBold()} was not blocked, and has gained two coins.");
-                                DBAddValue(p, Models.ValueType.CoinsCollected, 2);
-                                p.Coins += 2;
+                                Send($"{p.Name.ToBold()} has chosen to take income (1 coin).");
+                                DBAddValue(p, Models.ValueType.CoinsCollected);
+                                p.Coins++;
+                                break;
 
-                            }
-                            break;
-                        case Action.Coup:
-                            p.Coins -= 7;
-                            Send($"{p.Name.ToBold()} please choose who to Coup.", menu: CreateTargetMenu(p), menuTo: p.Id);
-                            LastMenu = null;
-                            WaitForChoice(ChoiceType.Target);
-                            target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
-                            DBAddValue(p, Models.ValueType.PlayersCouped);
-                            if (target == null) break;
-                            if (target.Cards.Count() == 1)
-                            {
-                                PlayerLoseCard(target, target.Cards.First());
-                                //Graveyard.Add(target.Cards.First());
-                                target.Cards.Clear();
-                                Send($"{target.Name.ToBold()}, you have been couped.  You are out of cards, and therefore out of the game!");
-                            }
-                            else
-                            {
-                                Send($"{p.Name.ToBold()} has chosen to Coup {target.Name.ToBold()}!  {target.Name.ToBold()} please choose a card to lose.");
-                                PlayerLoseCard(target);
-                            }
-                            break;
-                        case Action.Tax:
-                            if (PlayerMadeBlockableAction(p, Action.Tax))
-                            {
+                            case Action.ForeignAid:
+                                if (PlayerMadeBlockableAction(p, choice, cardUsed: "Ambassador"))
+                                {
+                                    LastMenu = null;
+                                    Send($"{p.Name.ToBold()} was not blocked, and has gained two coins.");
+                                    DBAddValue(p, Models.ValueType.CoinsCollected, 2);
+                                    p.Coins += 2;
+
+                                }
+                                break;
+                            case Action.Coup:
+                                p.Coins -= 7;
+                                Send($"{p.Name.ToBold()} please choose who to Coup.", menu: CreateTargetMenu(p), menuTo: p.Id);
                                 LastMenu = null;
-                                Send($"{p.Name.ToBold()} was not blocked, and has gained three coins.");
-                                DBAddValue(p, Models.ValueType.CoinsCollected, 3);
-                                p.Coins += 3;
-                            }
-                            break;
-                        case Action.Assassinate:
-                            //OH BOY
-                            p.Coins -= 3;
-                            Send($"{p.Name.ToBold()} has paid 3 coins.  Please choose who to assassinate.", menu: CreateTargetMenu(p), menuTo: p.Id);
-                            LastMenu = null;
-                            WaitForChoice(ChoiceType.Target);
-                            target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
-                            if (target == null) break;
-                            if (PlayerMadeBlockableAction(p, choice, target, "Assassin"))
-                            {
-                                DBAddValue(p, Models.ValueType.PlayersAssassinated);
-                                //unblocked!
+                                WaitForChoice(ChoiceType.Target);
+                                target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                DBAddValue(p, Models.ValueType.PlayersCouped);
+                                if (target == null)
+                                {
+                                    Send($"{p.Name.ToBold()} did not choose in time, and has lost 7 coins");
+                                    break;
+                                }
+
                                 if (target.Cards.Count() == 1)
                                 {
                                     PlayerLoseCard(target, target.Cards.First());
                                     //Graveyard.Add(target.Cards.First());
                                     target.Cards.Clear();
-                                    Send($"{target.Name.ToBold()}, you have been assassinated.  You are out of cards, and therefore out of the game!");
+                                    Send($"{target.Name.ToBold()}, you have been couped.  You are out of cards, and therefore out of the game!");
                                 }
                                 else
                                 {
-                                    Send($"{p.Name.ToBold()} was not blocked!  {target.Name.ToBold()} please choose a card to lose.");
+                                    Send($"{p.Name.ToBold()} has chosen to Coup {target.Name.ToBold()}!  {target.Name.ToBold()} please choose a card to lose.");
                                     PlayerLoseCard(target);
                                 }
-                            }
-                            break;
-                        case Action.Exchange:
-                            if (PlayerMadeBlockableAction(p, choice))
-                            {
-                                LastMenu = null;
-                                Cards.Shuffle();
-                                var count = p.Cards.Count();
-                                var newCards = Cards.Take(count).ToList();
-                                Cards.AddRange(p.Cards);
-                                newCards.AddRange(p.Cards.ToList());
-                                p.Cards.Clear();
-                                var menu = new InlineKeyboardMarkup(new[]
+                                break;
+                            case Action.Tax:
+                                if (PlayerMadeBlockableAction(p, Action.Tax))
                                 {
+                                    LastMenu = null;
+                                    Send($"{p.Name.ToBold()} was not blocked, and has gained three coins.");
+                                    DBAddValue(p, Models.ValueType.CoinsCollected, 3);
+                                    p.Coins += 3;
+                                }
+                                break;
+                            case Action.Assassinate:
+                                //OH BOY
+                                p.Coins -= 3;
+                                Send($"{p.Name.ToBold()} has paid 3 coins.  Please choose who to assassinate.", menu: CreateTargetMenu(p), menuTo: p.Id);
+                                LastMenu = null;
+                                WaitForChoice(ChoiceType.Target);
+                                target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                if (target == null)
+                                {
+                                    Send($"{p.Name.ToBold()} did not choose in time, and has lost 3 coins!");
+                                    break;
+
+                                }
+                                if (PlayerMadeBlockableAction(p, choice, target, "Assassin"))
+                                {
+                                    DBAddValue(p, Models.ValueType.PlayersAssassinated);
+                                    //unblocked!
+                                    if (target.Cards.Count() == 1)
+                                    {
+                                        PlayerLoseCard(target, target.Cards.First());
+                                        //Graveyard.Add(target.Cards.First());
+                                        target.Cards.Clear();
+                                        Send($"{target.Name.ToBold()}, you have been assassinated.  You are out of cards, and therefore out of the game!");
+                                    }
+                                    else
+                                    {
+                                        Send($"{p.Name.ToBold()} was not blocked!  {target.Name.ToBold()} please choose a card to lose.");
+                                        PlayerLoseCard(target);
+                                    }
+                                }
+                                break;
+                            case Action.Exchange:
+                                if (PlayerMadeBlockableAction(p, choice))
+                                {
+                                    LastMenu = null;
+                                    Cards.Shuffle();
+                                    var count = p.Cards.Count();
+                                    var newCards = Cards.Take(count).ToList();
+                                    Cards.AddRange(p.Cards);
+                                    newCards.AddRange(p.Cards.ToList());
+                                    p.Cards.Clear();
+                                    var menu = new InlineKeyboardMarkup(new[]
+                                    {
                                     newCards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
                                 });
-                                LastMenu = null;
-                                Send($"{p.Name.ToBold()} was not blocked. Please choose your new cards in PM @{Bot.Me.Username}.");
-                                Send($"{p.Name}, choose your first card", p.Id, menu: menu, menuTo: p.Id, newMsg: true);
-                                WaitForChoice(ChoiceType.Card);
-                                var card1 = CardToLose;
-                                var card2 = "";
-                                CardToLose = "";
-                                newCards.Remove(newCards.First(x => x.Name == card1));
-                                if (count == 2)
-                                {
-                                    menu = new InlineKeyboardMarkup(new[]
+                                    LastMenu = null;
+                                    Send($"{p.Name.ToBold()} was not blocked. Please choose your new cards in PM @{Bot.Me.Username}.");
+                                    Send($"{p.Name}, choose your first card", p.Id, menu: menu, menuTo: p.Id, newMsg: true);
+                                    WaitForChoice(ChoiceType.Card);
+                                    if (CardToLose == "")
                                     {
+                                        Send($"Time ran out, moving on");
+                                        break;
+                                    }
+                                    var card1 = CardToLose;
+                                    var card2 = "";
+                                    CardToLose = "";
+                                    newCards.Remove(newCards.First(x => x.Name == card1));
+                                    if (count == 2)
+                                    {
+                                        menu = new InlineKeyboardMarkup(new[]
+                                        {
                                         newCards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
                                     });
-                                    Send($"{p.Name}, choose your second card", p.Id, menu: menu, menuTo: p.Id);
-                                    WaitForChoice(ChoiceType.Card);
-                                    card2 = CardToLose;
-                                    CardToLose = null;
-                                    newCards.Remove(newCards.First(x => x.Name == card2));
-                                }
-                                var newCard = Cards.First(x => x.Name == card1);
-                                Cards.Remove(newCard);
-                                p.Cards.Add(newCard);
-                                if (count == 2)
-                                {
-                                    newCard = Cards.First(x => x.Name == card2);
+                                        Send($"{p.Name}, choose your second card", p.Id, menu: menu, menuTo: p.Id);
+                                        WaitForChoice(ChoiceType.Card);
+                                        if (CardToLose == "")
+                                        {
+                                            Send($"Time ran out, moving on");
+                                            break;
+                                        }
+                                        card2 = CardToLose;
+                                        CardToLose = null;
+                                        newCards.Remove(newCards.First(x => x.Name == card2));
+                                    }
+                                    var newCard = Cards.First(x => x.Name == card1);
                                     Cards.Remove(newCard);
                                     p.Cards.Add(newCard);
+                                    if (count == 2)
+                                    {
+                                        newCard = Cards.First(x => x.Name == card2);
+                                        Cards.Remove(newCard);
+                                        p.Cards.Add(newCard);
+                                    }
+                                    Cards.Shuffle();
+                                    TellCards(p);
                                 }
-                                Cards.Shuffle();
-                                TellCards(p);
-                            }
-                            break;
-                        case Action.Steal:
-                            Send($"{p.Name.ToBold()} please choose who to steal from.", menu: CreateTargetMenu(p), menuTo: p.Id);
-                            LastMenu = null;
-                            WaitForChoice(ChoiceType.Target);
-                            target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
-                            if (PlayerMadeBlockableAction(p, choice, target, "Captain"))
-                            {
-
+                                break;
+                            case Action.Steal:
+                                Send($"{p.Name.ToBold()} please choose who to steal from.", menu: CreateTargetMenu(p), menuTo: p.Id);
                                 LastMenu = null;
-                                var coinsTaken = Math.Min(target.Coins, 2);
-                                DBAddValue(p, Models.ValueType.CoinsStolen, coinsTaken);
-                                p.Coins += coinsTaken;
-                                target.Coins -= coinsTaken;
-                                Send($"{p.Name.ToBold()} was not blocked, and has taken {coinsTaken} coins from {target.Name.ToBold()}.");
-                            }
-                            break;
-                        default:
-                            break;
-                    }
+                                WaitForChoice(ChoiceType.Target);
+                                target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                if (target == null)
+                                {
+                                    Send($"{p.Name.ToBold()} did not choose in time");
+                                }
+                                if (PlayerMadeBlockableAction(p, choice, target, "Captain"))
+                                {
 
-                    //reset all the things
-                    ChoiceMade = Action.None;
-                    ChoiceTarget = 0;
-                    CardToLose = "";
-                    foreach (var pl in Players)
-                    {
-                        pl.CallBluff = null;
-                        pl.Block = null;
-                    }
-                    if (Players.Count(x => x.Cards.Count() > 0) == 1)
-                    {
-                        //game is over
-                        var winner = Players.FirstOrDefault(x => x.Cards.Count() > 0);
-                        //set the winner in the database
-                        using (var db = new CoupContext())
-                        {
-                            var gp = GetDBGamePlayer(winner, db);
-                            gp.Won = true;
-                            gp.EndingCards = winner.Cards.Count() > 1 ? winner.Cards.Aggregate("", (a, b) => a + "," + b.Name) : winner.Cards.First().Name;
-
-                            var g = db.Games.Find(DBGameId);
-                            g.TimeEnded = DateTime.UtcNow;
-                            db.SaveChanges();
+                                    LastMenu = null;
+                                    var coinsTaken = Math.Min(target.Coins, 2);
+                                    DBAddValue(p, Models.ValueType.CoinsStolen, coinsTaken);
+                                    p.Coins += coinsTaken;
+                                    target.Coins -= coinsTaken;
+                                    Send($"{p.Name.ToBold()} was not blocked, and has taken {coinsTaken} coins from {target.Name.ToBold()}.");
+                                }
+                                break;
+                            case Action.Concede:
+                                Graveyard.AddRange(p.Cards);
+                                p.Cards.Clear();
+                                Send($"{p.Name} has chosen to concede the game, and is out!");
+                                break;
+                            default:
+                                Send($"{p.Name.ToBold()} did not do anything, moving on...");
+                                break;
                         }
-                        Send($"{winner.GetName()} has won the game!", newMsg: true);
-                        State = GameState.Ended;
-                        return;
-                    }
 
+                        //reset all the things
+                        ChoiceMade = Action.None;
+                        ChoiceTarget = 0;
+                        CardToLose = "";
+                        foreach (var pl in Players)
+                        {
+                            pl.CallBluff = null;
+                            pl.Block = null;
+                        }
+                        if (Players.Count(x => x.Cards.Count() > 0) == 1)
+                        {
+                            //game is over
+                            var winner = Players.FirstOrDefault(x => x.Cards.Count() > 0);
+                            //set the winner in the database
+                            using (var db = new CoupContext())
+                            {
+                                var gp = GetDBGamePlayer(winner, db);
+                                gp.Won = true;
+                                gp.EndingCards = winner.Cards.Count() > 1 ? winner.Cards.Aggregate("", (a, b) => a + "," + b.Name) : winner.Cards.First().Name;
+
+                                var g = db.Games.Find(DBGameId);
+                                g.TimeEnded = DateTime.UtcNow;
+                                db.SaveChanges();
+                            }
+                            Send($"{winner.GetName()} has won the game!", newMsg: true);
+                            State = GameState.Ended;
+                            return;
+                        }
+
+                    }
                 }
+                catch (Exception e)
+                {
+                    Send($"Game error: {e.Message}\n{e.StackTrace}");
+                    State = GameState.Ended;
+                    return;
+                }
+
             }
+
         }
 
-        internal void Concede(int id)
+        internal void Concede()
         {
-            var p = Players.FirstOrDefault(x => x.Id == id);
-            if (p == null) return;
-            Graveyard.AddRange(p.Cards);
-            p.Cards.Clear();
-            Send($"{p.Name} has chosen to concede the game, and is out!");
-            ChoiceMade = Action.None;
+            ChoiceMade = Action.Concede;
         }
 
         private void SendMenu(CPlayer p)
@@ -451,6 +508,7 @@ namespace CoupForTelegram
                 Thread.Sleep(500);
                 timeToChoose--;
             }
+
             return ChoiceMade;
         }
 
@@ -715,7 +773,7 @@ namespace CoupForTelegram
                     id = ChatId;
                 else
                 {
-                    foreach (var p in Players)
+                    foreach (var p in Players.ToList())
                     {
                         var newMenu = menu;
                         if (p.Id == menuNot)

@@ -51,6 +51,7 @@ namespace CoupForTelegram.Models
         /// <summary>
         /// No choice made
         /// </summary>
-        None
+        None,
+        Concede
     }
 }

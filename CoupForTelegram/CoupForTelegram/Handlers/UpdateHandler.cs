@@ -58,9 +58,9 @@ namespace CoupForTelegram.Handlers
                         Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
                         return;
                     }
-                    Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdArj6KMufrhae0A1RA", m.Chat.Id);
+                    Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdEE_fl3Jmsi7TL02_A", m.Chat.Id);
                     //check for gameid
-                    Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
+                    //Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     try
                     {
                         var id = int.Parse(m.Text.Split(' ')[1]);
@@ -106,7 +106,7 @@ namespace CoupForTelegram.Handlers
                         Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
                         return;
                     }
-                    Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdArj6KMufrhae0A1RA", m.Chat.Id);
+                    Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdEE_fl3Jmsi7TL02_A", m.Chat.Id);
                     Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     //check to see if an existing game is already being played.
                     // if group, just look for a group game with the chat id
@@ -246,7 +246,7 @@ namespace CoupForTelegram.Handlers
                         Bot.ReplyToCallback(c, "Please concede on your turn only", false, false);
                         break;
                     }
-                    g.Concede(c.From.Id);
+                    g.Concede();
                     Bot.ReplyToCallback(c, "Accepted");
                     break;
                 case "card":
@@ -343,6 +343,9 @@ namespace CoupForTelegram.Handlers
                     break;
                 case "spgs":
                     //check for a game waiting for more players
+                    if (Program.Games.Any(x => x.Players.Any(pl => pl.Id == c.From.Id)))
+                        Bot.ReplyToCallback(c, "You are already in a game!");
+
                     g = Program.Games.FirstOrDefault(x => x.State == GameState.Joining && x.Players.Count() < 6);
                     if (g != null)
                     {
@@ -350,10 +353,10 @@ namespace CoupForTelegram.Handlers
                         switch (result)
                         {
                             case 1:
-                                Bot.ReplyToCallback(c, "You are already in a game!");
+                                Bot.ReplyToCallback(c, "You are already in the game!");
                                 break;
                             case 0:
-                                Bot.ReplyToCallback(c, "You have joined a game!");
+                                Bot.ReplyToCallback(c, "You have joined the game!");
                                 break;
                         }
                         //TODO: give player list, total count
@@ -367,6 +370,8 @@ namespace CoupForTelegram.Handlers
                     Console.WriteLine($"{c.From.FirstName} has joined game: {g.GameId}");
                     break;
                 case "sgg":
+                    if (Program.Games.Any(x => x.Players.Any(pl => pl.Id == c.From.Id)))
+                        Bot.ReplyToCallback(c, "You are already in a game!");
                     g = CreateGame(c.From, true);
                     Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Click below to send the game to the group!", replyMarkup: new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Click here") { Url = $"https://telegram.me/{Bot.Me.Username}?startgroup={g.GameId}" } }));
                     break;
@@ -382,7 +387,7 @@ namespace CoupForTelegram.Handlers
                                 Bot.ReplyToCallback(c, "You have joined a game!", false, true);
                                 break;
                             case 1:
-                                Bot.ReplyToCallback(c, "You are already in a game!", false, true);
+                                Bot.ReplyToCallback(c, "You are already in the game!", false, true);
                                 break;
                         }
                     }
