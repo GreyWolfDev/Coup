@@ -1,10 +1,12 @@
 ﻿using CoupForTelegram.Models;
+using Database;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using System.Threading.Tasks;
+using Telegram.Bot.Types;
 
 namespace CoupForTelegram.Helpers
 {
@@ -24,6 +26,32 @@ namespace CoupForTelegram.Helpers
                 T value = list[k];
                 list[k] = list[n];
                 list[n] = value;
+            }
+        }
+
+        public static bool BetaCheck(this User u)
+        {
+            using (var db = new CoupContext())
+            {
+                var p = db.Players.FirstOrDefault(x => x.TelegramId == u.Id);
+                if (p == null && db.Players.Count() < 52)
+                {
+                    p = new Player
+                    {
+                        Created = DateTime.UtcNow,
+                        Language = "English",
+                        Name = (u.FirstName + " " + u.LastName).Trim(),
+                        TelegramId = u.Id,
+                        Username = u.Username
+                    };
+                    db.Players.Add(p);
+                    db.SaveChanges();
+                    return true;
+                }
+                else if (p != null)
+                    return true;
+
+                return false;
             }
         }
 

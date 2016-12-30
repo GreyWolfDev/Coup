@@ -49,9 +49,14 @@ namespace CoupForTelegram.Handlers
                     }
                     break;
                 case "help":
-                    //TODO add some help
+                    Bot.SendAsync("https://www.youtube.com/watch?v=xUNWl5fWfEY", m.Chat.Id);
                     break;
                 case "start":
+                    if (!m.From.BetaCheck())
+                    {
+                        Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
+                        return;
+                    }
                     //check for gameid
                     Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     try
@@ -94,6 +99,11 @@ namespace CoupForTelegram.Handlers
 
                     break;
                 case "newgame":
+                    if (!m.From.BetaCheck())
+                    {
+                        Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
+                        return;
+                    }
                     Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     //check to see if an existing game is already being played.
                     // if group, just look for a group game with the chat id
@@ -133,8 +143,6 @@ namespace CoupForTelegram.Handlers
                     break;
 
                 case "test":
-                    g = new Game(432, m.From, false, false);
-                    g.AddPlayer(null);
                     break;
             }
         }
