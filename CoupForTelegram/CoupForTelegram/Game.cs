@@ -69,7 +69,7 @@ namespace CoupForTelegram
                     var pl = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
                     if (pl == null)
                     {
-                        pl = new Player { TelegramId = p.Id, Created = DateTime.UtcNow };
+                        pl = new Player { TelegramId = p.Id, Created = DateTime.UtcNow, Language = "English" };
                         db.Players.Add(pl);
                     }
                     pl.Name = p.Name;
@@ -143,7 +143,7 @@ namespace CoupForTelegram
                     var dbp = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
                     if (dbp == null)
                     {
-                        dbp = new Player { TelegramId = p.Id, Created = DateTime.UtcNow };
+                        dbp = new Player { TelegramId = p.Id, Created = DateTime.UtcNow, Language = "English" };
                         db.Players.Add(dbp);
                         db.SaveChanges();
                     }
@@ -161,7 +161,8 @@ namespace CoupForTelegram
                     db.SaveChanges();
                 }
                 //tell player their cards
-                TellCards(p);
+                SendMenu(p);
+                //TellCards(p);
             }
             //DEBUG OUT
 #if DEBUG
@@ -374,6 +375,30 @@ namespace CoupForTelegram
             }
         }
 
+        private void SendMenu(CPlayer p)
+        {
+            /*
+             * actions: 
+             * get status (players, card / coin counts)
+             * see graveyard
+             * get cards (see what is in your hand)
+             * resign from / concede the game
+            */
+            var menu = new InlineKeyboardMarkup(new[]
+            {
+                new[] {
+                    new InlineKeyboardButton("Game Status",$"status|{GameId}"),
+                    new InlineKeyboardButton("Graveyard",$"grave|{GameId}")
+                },
+                new[]
+                {
+                    new InlineKeyboardButton("See Cards",$"cards|{GameId}|{p.Id}"),
+                    new InlineKeyboardButton("Resign / Concede", $"concede|{GameId}|{p.Id}")
+                }
+            });
+            Send("Options:", p.Id, menu: menu, newMsg: true, specialMenu: true);
+        }
+
         /// <summary>
         /// Sleeps until a choice has been made
         /// </summary>
@@ -562,7 +587,7 @@ namespace CoupForTelegram
             }
         }
 
-        
+
 
         private void PlayerLoseCard(CPlayer p, Card card = null)
         {
@@ -641,7 +666,7 @@ namespace CoupForTelegram
         {
             Send(p.Cards.Aggregate("Your cards:\n", (a, b) => a + "\n" + b.Name), p.Id, newMsg: true).ToList();
         }
-        private List<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false, int menuTo = 0, int menuNot = 0)
+        private List<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false, int menuTo = 0, int menuNot = 0, bool specialMenu = false)
         {
             var result = new List<Message>();
             if (id == 0)
@@ -679,9 +704,10 @@ namespace CoupForTelegram
                     else
                     {
                         r = Bot.SendAsync(message, id, clearKeyboard, menu, game: this).Result;
-                        LastMenu = menu;
+                        if (!specialMenu)
+                            LastMenu = menu;
                     }
-                    if (p != null)
+                    if (p != null & !specialMenu)
                     {
                         p.LastMessageId = r.MessageId;
                         p.LastMessageSent = message;
@@ -785,7 +811,7 @@ namespace CoupForTelegram
 
         private GamePlayer GetDBGamePlayer(Player player)
         {
-            return player?.GamePlayers.FirstOrDefault(x => x.GameId == GameId);
+            return player?.GamePlayers.FirstOrDefault(x => x.GameId == DBGameId);
         }
 
         private GamePlayer GetDBGamePlayer(CPlayer player, CoupContext db)

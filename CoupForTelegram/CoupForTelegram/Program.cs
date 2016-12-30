@@ -9,6 +9,7 @@ using System.Threading.Tasks;
 using Microsoft.Win32;
 using Telegram.Bot;
 using Telegram.Bot.Args;
+using Database;
 
 namespace CoupForTelegram
 {
@@ -32,6 +33,12 @@ namespace CoupForTelegram
         internal static DateTime StartTime = DateTime.UtcNow;
         static void Main(string[] args)
         {
+            //initialize EF before we start receiving
+            using (var db = new CoupContext())
+            {
+                var count = db.ChatGroups.Count();
+            }
+
             new Thread(Bot.Initialize).Start();
             new Thread(Cleaner).Start();
             new Thread(Monitor).Start();
