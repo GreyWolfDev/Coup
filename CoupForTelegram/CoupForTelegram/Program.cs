@@ -33,11 +33,28 @@ namespace CoupForTelegram
         internal static DateTime StartTime = DateTime.UtcNow;
         static void Main(string[] args)
         {
+
+            AppDomain.CurrentDomain.UnhandledException += (sender, eventArgs) =>
+            {
+                //drop the error to log file and exit
+                using (var sw = new StreamWriter(Path.Combine(Bot.RootDirectory, "Logs\\error.log"), true))
+                {
+                    
+                    var e = (eventArgs.ExceptionObject as Exception);
+                    sw.WriteLine(DateTime.Now);
+                    sw.WriteLine(e.Message);
+                    sw.WriteLine(e.StackTrace + "\n");
+                    if (eventArgs.IsTerminating)
+                        Environment.Exit(5);
+                }
+            };
+
             //initialize EF before we start receiving
             using (var db = new CoupContext())
             {
                 var count = db.ChatGroups.Count();
             }
+
 
             new Thread(Bot.Initialize).Start();
             new Thread(Cleaner).Start();
