@@ -58,6 +58,7 @@ namespace CoupForTelegram.Handlers
                         Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
                         return;
                     }
+                    Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdArj6KMufrhae0A1RA", m.Chat.Id);
                     //check for gameid
                     Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     try
@@ -105,6 +106,7 @@ namespace CoupForTelegram.Handlers
                         Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
                         return;
                     }
+                    Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdArj6KMufrhae0A1RA", m.Chat.Id);
                     Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     //check to see if an existing game is already being played.
                     // if group, just look for a group game with the chat id
