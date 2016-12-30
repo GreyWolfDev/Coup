@@ -4,7 +4,7 @@
   <edmx:Runtime>
     <!-- SSDL content -->
     <edmx:StorageModels>
-      <Schema Namespace="coupModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
+    <Schema Namespace="coupModel.Store" Provider="System.Data.SqlClient" ProviderManifestToken="2012" Alias="Self" xmlns:store="http://schemas.microsoft.com/ado/2007/12/edm/EntityStoreSchemaGenerator" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm/ssdl">
         <EntityType Name="Bluff">
           <Key>
             <PropertyRef Name="Id" />
@@ -54,6 +54,7 @@
           <Property Name="PlayersCouped" Type="int" Nullable="false" />
           <Property Name="PlayersAssassinated" Type="int" Nullable="false" />
           <Property Name="GameId" Type="int" Nullable="false" />
+          <Property Name="BluffsMade" Type="int" Nullable="false" />
         </EntityType>
         <EntityType Name="Player">
           <Key>
@@ -180,8 +181,7 @@
             <End Role="GamePlayer" EntitySet="GamePlayer" />
           </AssociationSet>
         </EntityContainer>
-      </Schema>
-    </edmx:StorageModels>
+      </Schema></edmx:StorageModels>
     <!-- CSDL content -->
     <edmx:ConceptualModels>
       <Schema Namespace="coupModel" Alias="Self" annotation:UseStrongSpatialTypes="false" xmlns:annotation="http://schemas.microsoft.com/ado/2009/02/edm/annotation" xmlns:customannotation="http://schemas.microsoft.com/ado/2013/11/edm/customannotation" xmlns="http://schemas.microsoft.com/ado/2009/11/edm">
@@ -243,6 +243,7 @@
           <Property Name="GameId" Type="Int32" Nullable="false" />
           <NavigationProperty Name="Game" Relationship="Self.FK__GamePlaye__GameI__3C69FB99" FromRole="GamePlayer" ToRole="Game" />
           <NavigationProperty Name="Player" Relationship="Self.FK__GamePlaye__Playe__3B75D760" FromRole="GamePlayer" ToRole="Player" />
+          <Property Name="BluffsMade" Type="Int32" Nullable="false" />
         </EntityType>
         <EntityType Name="Player">
           <Key>
@@ -416,6 +417,7 @@
           <EntitySetMapping Name="GamePlayers">
             <EntityTypeMapping TypeName="coupModel.GamePlayer">
               <MappingFragment StoreEntitySet="GamePlayer">
+                <ScalarProperty Name="BluffsMade" ColumnName="BluffsMade" />
                 <ScalarProperty Name="Id" ColumnName="Id" />
                 <ScalarProperty Name="PlayerId" ColumnName="PlayerId" />
                 <ScalarProperty Name="StartingCards" ColumnName="StartingCards" />

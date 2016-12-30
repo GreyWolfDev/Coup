@@ -18,5 +18,8 @@ namespace CoupForTelegram.Models
         public string LastMessageSent { get; set; } = "";
         public bool? CallBluff { get; set; } = null;
         public bool? Block { get; internal set; } = null;
+        public string Language { get; internal set; }
+        public int DBPlayerId { get; internal set; }
+        public int DBGamePlayerId { get; internal set; }
     }
 }

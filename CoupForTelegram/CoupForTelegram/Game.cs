@@ -9,13 +9,14 @@ using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 using Action = CoupForTelegram.Models.Action;
-
+using Database;
 
 namespace CoupForTelegram
 {
     public class Game
     {
         public int GameId;
+        public int DBGameId;
         public long ChatId;
         public List<Card> Cards = CardHelper.GenerateCards();
         public List<Card> Graveyard = new List<Card>();
@@ -63,7 +64,18 @@ namespace CoupForTelegram
             {
                 p = new CPlayer { Id = u.Id, Name = (u.FirstName + " " + u.LastName).Trim(), TeleUser = u };
                 //check for player in database, add if needed
-
+                using (var db = new CoupContext())
+                {
+                    var pl = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
+                    if (pl == null)
+                    {
+                        pl = new Player { TelegramId = p.Id, Created = DateTime.UtcNow };
+                        db.Players.Add(pl);
+                    }
+                    pl.Name = p.Name;
+                    pl.Username = u.Username;
+                    db.SaveChanges();
+                }
                 Players.Add(p);
             }
             else
@@ -102,6 +114,16 @@ namespace CoupForTelegram
             Program.GamesPlayed++;
             State = GameState.Initializing;
 
+            //create db entry for game
+            using (var db = new CoupContext())
+            {
+                var grp = db.ChatGroups.FirstOrDefault(x => x.TelegramId == ChatId);
+                var g = new Database.Game { GroupId = grp?.Id, GameType = IsGroup ? "Group" : IsRandom ? "Stranger" : "Friend", TimeStarted = DateTime.Now };
+                db.Games.Add(g);
+                db.SaveChanges();
+                DBGameId = g.Id;
+            }
+
             //hand out cards
             foreach (var p in Players)
             {
@@ -115,7 +137,29 @@ namespace CoupForTelegram
                 var card = Cards.First();
                 Cards.Remove(card);
                 p.Cards.Add(card);
+                using (var db = new CoupContext())
+                {
+                    //create db entry
+                    var dbp = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
+                    if (dbp == null)
+                    {
+                        dbp = new Player { TelegramId = p.Id, Created = DateTime.UtcNow };
+                        db.Players.Add(dbp);
+                        db.SaveChanges();
+                    }
+                    dbp.Name = p.Name;
+                    dbp.Username = p.TeleUser.Username;
 
+                    p.Language = dbp.Language;
+
+                    var gp = new GamePlayer()
+                    {
+                        GameId = DBGameId,
+                        StartingCards = p.Cards.Aggregate("", (a, b) => a + "," + b.Name)
+                    };
+                    dbp.GamePlayers.Add(gp);
+                    db.SaveChanges();
+                }
                 //tell player their cards
                 TellCards(p);
             }
@@ -163,6 +207,7 @@ namespace CoupForTelegram
                         case Action.Income:
                             LastMenu = null;
                             Send($"{p.Name.ToBold()} has chosen to take income (1 coin).");
+                            DBAddValue(p, Models.ValueType.CoinsCollected);
                             p.Coins++;
                             break;
 
@@ -171,7 +216,9 @@ namespace CoupForTelegram
                             {
                                 LastMenu = null;
                                 Send($"{p.Name.ToBold()} was not blocked, and has gained two coins.");
+                                DBAddValue(p, Models.ValueType.CoinsCollected, 2);
                                 p.Coins += 2;
+
                             }
                             break;
                         case Action.Coup:
@@ -180,13 +227,13 @@ namespace CoupForTelegram
                             LastMenu = null;
                             WaitForChoice(ChoiceType.Target);
                             target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                            DBAddValue(p, Models.ValueType.PlayersCouped);
                             if (target == null) break;
                             if (target.Cards.Count() == 1)
                             {
                                 PlayerLoseCard(target, target.Cards.First());
                                 //Graveyard.Add(target.Cards.First());
                                 target.Cards.Clear();
-
                                 Send($"{target.Name.ToBold()}, you have been couped.  You are out of cards, and therefore out of the game!");
                             }
                             else
@@ -200,6 +247,7 @@ namespace CoupForTelegram
                             {
                                 LastMenu = null;
                                 Send($"{p.Name.ToBold()} was not blocked, and has gained three coins.");
+                                DBAddValue(p, Models.ValueType.CoinsCollected, 3);
                                 p.Coins += 3;
                             }
                             break;
@@ -213,7 +261,7 @@ namespace CoupForTelegram
                             if (target == null) break;
                             if (PlayerMadeBlockableAction(p, choice, target, "Assassin"))
                             {
-
+                                DBAddValue(p, Models.ValueType.PlayersAssassinated);
                                 //unblocked!
                                 if (target.Cards.Count() == 1)
                                 {
@@ -283,8 +331,10 @@ namespace CoupForTelegram
                             target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
                             if (PlayerMadeBlockableAction(p, choice, target, "Captain"))
                             {
+
                                 LastMenu = null;
                                 var coinsTaken = Math.Min(target.Coins, 2);
+                                DBAddValue(p, Models.ValueType.CoinsStolen, coinsTaken);
                                 p.Coins += coinsTaken;
                                 target.Coins -= coinsTaken;
                                 Send($"{p.Name.ToBold()} was not blocked, and has taken {coinsTaken} coins from {target.Name.ToBold()}.");
@@ -307,6 +357,14 @@ namespace CoupForTelegram
                     {
                         //game is over
                         var winner = Players.FirstOrDefault(x => x.Cards.Count() > 0);
+                        //set the winner in the database
+                        using (var db = new CoupContext())
+                        {
+                            var gp = GetDBGamePlayer(winner, db);
+                            gp.Won = true;
+                            gp.EndingCards = winner.Cards.Count() > 1 ? winner.Cards.Aggregate("", (a, b) => a + "," + b.Name) : winner.Cards.First().Name;
+                            db.SaveChanges();
+                        }
                         Send($"{winner.GetName()} has won the game!", newMsg: true);
                         State = GameState.Ended;
                         return;
@@ -315,6 +373,7 @@ namespace CoupForTelegram
                 }
             }
         }
+
         /// <summary>
         /// Sleeps until a choice has been made
         /// </summary>
@@ -434,6 +493,10 @@ namespace CoupForTelegram
                     CardToLose = "";
                 }
                 var blocked = PlayerMadeBlockableAction(blocker, (Action)Enum.Parse(typeof(Action), "Block" + a.ToString(), true), p, cardUsed);
+                if (blocked)
+                {
+                    DBAddValue(blocker, Models.ValueType.ActionsBlocked);
+                }
                 return !blocked;
             }
             else if (bluffer != null)
@@ -483,14 +546,23 @@ namespace CoupForTelegram
                         Send(msg + $"{p.Name.ToBold()}, you did not have {cardUsed.ToBold()}! You must pick a card to lose.");
                         PlayerLoseCard(p);
                     }
+                    //successful bluff called
+                    DBAddBluff(p, cardUsed, true, bluffer);
                     return false;
                 }
             }
             else
             {
+                if (!PlayerCanDoAction(a, p))
+                {
+                    //was a successful bluff
+                    DBAddBluff(p, cardUsed);
+                }
                 return true;
             }
         }
+
+        
 
         private void PlayerLoseCard(CPlayer p, Card card = null)
         {
@@ -629,6 +701,112 @@ namespace CoupForTelegram
                 result.Add(r);
             }
             return result;
+        }
+        #endregion
+
+        #region Database
+
+        private void DBAddBluff(CPlayer p, string cardUsed, bool v = false, CPlayer caller = null)
+        {
+            using (var db = new CoupContext())
+            {
+                var gp = GetDBGamePlayer(p, db);
+                var calledgp = GetDBGamePlayer(caller, db);
+                var dbp = GetDBPlayer(p, db);
+                int? calledBy = GetDBPlayer(caller, db)?.Id;
+                if (!v)
+                    gp.BluffsMade++;
+                else
+                    calledgp.BluffsCalled++;
+                var b = new Bluff
+                {
+                    BluffCalled = v,
+                    BlufferId = dbp.Id,
+                    CardBluffed = cardUsed,
+                    CalledById = calledBy,
+                    GameId = DBGameId
+                };
+                db.Bluffs.Add(b);
+                db.SaveChanges();
+            }
+        }
+
+        private void DBAddValue(CPlayer p, Models.ValueType prop, int val = 1)
+        {
+            new Task(() =>
+            {
+                using (var db = new CoupContext())
+                {
+                    var gp = GetDBGamePlayer(p, db);
+                    switch (prop)
+                    {
+                        case Models.ValueType.CoinsCollected:
+                            gp.CoinsCollected += val;
+                            break;
+                        case Models.ValueType.CoinsStolen:
+                            gp.CoinsStolen += val;
+                            break;
+                        case Models.ValueType.ActionsBlocked:
+                            gp.ActionsBlocked += val;
+                            break;
+                        case Models.ValueType.BluffsCalled:
+                            throw new Exception("Use DBAddBluff");
+                        case Models.ValueType.PlayersCouped:
+                            gp.PlayersCouped += val;
+                            break;
+                        case Models.ValueType.PlayersAssassinated:
+                            gp.PlayersAssassinated += val;
+                            break;
+                    }
+                    db.SaveChanges();
+                }
+            }).Start();
+        }
+
+        private Player GetDBPlayer(CPlayer player, CoupContext db)
+        {
+            if (player == null)
+                return null;
+            if (player.DBPlayerId == 0)
+            {
+                var p = db.Players.FirstOrDefault(x => x.TelegramId == player.Id);
+                player.DBPlayerId = p?.Id ?? 0;
+                return p;
+            }
+            try
+            {
+                return db.Players.Find(player.DBPlayerId);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        private GamePlayer GetDBGamePlayer(Player player)
+        {
+            return player?.GamePlayers.FirstOrDefault(x => x.GameId == GameId);
+        }
+
+        private GamePlayer GetDBGamePlayer(CPlayer player, CoupContext db)
+        {
+            if (player == null)
+                return null;
+            if (player.DBGamePlayerId == 0)
+            {
+                var p = GetDBGamePlayer(GetDBPlayer(player, db));
+                player.DBGamePlayerId = p?.Id ?? 0;
+                return p;
+            }
+
+            try
+            {
+                return db.GamePlayers.Find(player.DBGamePlayerId);
+            }
+            catch
+            {
+                return null;
+            }
         }
         #endregion
     }

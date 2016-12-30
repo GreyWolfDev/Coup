@@ -27,6 +27,7 @@ namespace Database
         public int PlayersCouped { get; set; }
         public int PlayersAssassinated { get; set; }
         public int GameId { get; set; }
+        public int BluffsMade { get; set; }
     
         public virtual Game Game { get; set; }
         public virtual Player Player { get; set; }
