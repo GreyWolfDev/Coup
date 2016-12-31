@@ -260,6 +260,7 @@ namespace CoupForTelegram
                         CPlayer target;
                         CPlayer blocker;
                         CPlayer bluffer;
+                        IEnumerable<CPlayer> choices;
                         switch (choice)
                         {
                             //DONE
@@ -281,11 +282,17 @@ namespace CoupForTelegram
                                 break;
                             case Action.Coup:
                                 p.Coins -= 7;
-                                Send($"{p.Name.ToBold()} has chosen to Coup, choosing target.");
-                                Send($"Please choose who to Coup.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
-                                LastMenu = null;
-                                WaitForChoice(ChoiceType.Target);
-                                target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                Send($"{p.Name.ToBold()} has chosen to Coup.");
+                                choices = Players.Where(x => x.Id != p.Id && x.Cards.Count() > 0);
+                                if (choices.Count() == 1)
+                                    target = choices.First();
+                                else
+                                {
+                                    Send($"Please choose who to Coup.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
+                                    LastMenu = null;
+                                    WaitForChoice(ChoiceType.Target);
+                                    target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                }
                                 DBAddValue(p, Models.ValueType.PlayersCouped);
                                 if (target == null)
                                 {
@@ -320,11 +327,18 @@ namespace CoupForTelegram
                             case Action.Assassinate:
                                 //OH BOY
                                 p.Coins -= 3;
-                                Send($"{p.Name.ToBold()} has paid 3 coins to assassinate, choosing target.");
-                                Send($"Please choose who to assassinate.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
-                                LastMenu = null;
-                                WaitForChoice(ChoiceType.Target);
-                                target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                Send($"{p.Name.ToBold()} has paid 3 coins to assassinate.");
+                                choices = Players.Where(x => x.Id != p.Id && x.Cards.Count() > 0);
+                                if (choices.Count() == 1)
+                                    target = choices.First();
+                                else
+                                {
+                                    Send($"Please choose who to assassinate.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
+                                    LastMenu = null;
+                                    WaitForChoice(ChoiceType.Target);
+                                    target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                }
+                                
                                 if (target == null)
                                 {
                                     LastMenu = null;
@@ -416,11 +430,17 @@ namespace CoupForTelegram
                                 }
                                 break;
                             case Action.Steal:
-                                Send($"{p.Name.ToBold()} has chosen to steal.  Choosing target...");
-                                Send($"{p.Name.ToBold()} please choose who to steal from.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
-                                LastMenu = null;
-                                WaitForChoice(ChoiceType.Target);
-                                target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                Send($"{p.Name.ToBold()} has chosen to steal.");
+                                choices = Players.Where(x => x.Id != p.Id && x.Cards.Count() > 0);
+                                if (choices.Count() == 1)
+                                    target = choices.First();
+                                else
+                                {
+                                    Send($"{p.Name.ToBold()} please choose who to steal from.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
+                                    LastMenu = null;
+                                    WaitForChoice(ChoiceType.Target);
+                                    target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
+                                }
                                 if (target == null)
                                 {
                                     LastMenu = null;
