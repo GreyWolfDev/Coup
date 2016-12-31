@@ -440,6 +440,11 @@ namespace CoupForTelegram.Handlers
                 case "start":
                     id = int.Parse(c.Data.Split('|')[1]);
                     g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (!g.Players.Any(x => x.Id == c.From.Id))
+                    {
+                        Bot.ReplyToCallback(c, "You aren't even in the game!", false, true);
+                        return;
+                    }
                     g?.StartGame();
                     break;
 
