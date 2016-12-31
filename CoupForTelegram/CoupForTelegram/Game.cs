@@ -280,7 +280,8 @@ namespace CoupForTelegram
                                 break;
                             case Action.Coup:
                                 p.Coins -= 7;
-                                Send($"{p.Name.ToBold()} please choose who to Coup.", menu: CreateTargetMenu(p), menuTo: p.Id);
+                                Send($"{p.Name.ToBold()} has chosen to Coup, choosing target.");
+                                Send($"Please choose who to Coup.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
                                 LastMenu = null;
                                 WaitForChoice(ChoiceType.Target);
                                 target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
@@ -318,7 +319,8 @@ namespace CoupForTelegram
                             case Action.Assassinate:
                                 //OH BOY
                                 p.Coins -= 3;
-                                Send($"{p.Name.ToBold()} has paid 3 coins.  Please choose who to assassinate.", menu: CreateTargetMenu(p), menuTo: p.Id);
+                                Send($"{p.Name.ToBold()} has paid 3 coins to assassinate, choosing target.");
+                                Send($"Please choose who to assassinate.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
                                 LastMenu = null;
                                 WaitForChoice(ChoiceType.Target);
                                 target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
@@ -409,7 +411,8 @@ namespace CoupForTelegram
                                 }
                                 break;
                             case Action.Steal:
-                                Send($"{p.Name.ToBold()} please choose who to steal from.", menu: CreateTargetMenu(p), menuTo: p.Id);
+                                Send($"{p.Name.ToBold()} has chosen to steal.  Choosing target...");
+                                Send($"{p.Name.ToBold()} please choose who to steal from.", p.Id, menu: CreateTargetMenu(p), menuTo: p.Id);
                                 LastMenu = null;
                                 WaitForChoice(ChoiceType.Target);
                                 target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
@@ -867,7 +870,7 @@ namespace CoupForTelegram
             }
             Send(cards, p.Id, newMsg: true).ToList();
         }
-        private List<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false, int menuTo = 0, int menuNot = 0, bool specialMenu = false)
+        private List<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false, int menuTo = 0, int menuNot = 0, bool specialMenu = false, bool joinMessage = false)
         {
             var result = new List<Message>();
             if (id == 0)
@@ -883,7 +886,6 @@ namespace CoupForTelegram
                             newMenu = null;
                         if (menuTo != 0 && menuTo != p.Id)
                             newMenu = null;
-
                         result.AddRange(Send(message, p.Id, clearKeyboard, newMenu, newMsg));
                     }
                 }
@@ -901,6 +903,11 @@ namespace CoupForTelegram
                     {
                         message = lastStr + Environment.NewLine + message;
                         r = Bot.Edit(id, last, message, menu ?? LastMenu).Result;
+                    }
+                    else if (last == 0 && joinMessage)
+                    {
+                        message = Players.First().LastMessageSent + Environment.NewLine + message;
+                        r = Bot.SendAsync(message, id, customMenu: menu ?? LastMenu).Result;
                     }
                     else
                     {

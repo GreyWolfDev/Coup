@@ -74,7 +74,12 @@ namespace CoupForTelegram.Handlers
                             if (m.Chat.Type == Telegram.Bot.Types.Enums.ChatType.Private)
                             {
                                 //private chat - was it sent by the actual person?
-
+                                if (startgame.Players.Any(x => x.Id == m.From.Id))
+                                {
+                                    //already in game
+                                    return;
+                                }
+                                startgame.AddPlayer(m.From);
                             }
                             else if (m.Chat.Type != Telegram.Bot.Types.Enums.ChatType.Channel)
                             {
@@ -354,7 +359,12 @@ namespace CoupForTelegram.Handlers
                 //TODO: change these to enums with int values
                 case "spgf":
                     g = CreateGame(c.From);
-                    Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Share this link to invite friends: https://telegram.me/{Bot.Me.Username}?start={g.GameId}");
+                    var menu = new InlineKeyboardMarkup(new[]
+                                    {
+                                        new InlineKeyboardButton("Start", "start|" + g.GameId.ToString())
+                                    });
+                    Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Share this link to invite friends: https://telegram.me/{Bot.Me.Username}?start={g.GameId}", replyMarkup: menu);
+                    
                     break;
                 case "spgs":
                     //check for a game waiting for more players
