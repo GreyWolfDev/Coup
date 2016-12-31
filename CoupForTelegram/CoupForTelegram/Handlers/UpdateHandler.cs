@@ -386,7 +386,7 @@ namespace CoupForTelegram.Handlers
                     if (Program.Games.Any(x => x.Players.Any(pl => pl.Id == c.From.Id)))
                         Bot.ReplyToCallback(c, "You are already in a game!");
 
-                    g = Program.Games.FirstOrDefault(x => x.State == GameState.Joining && x.Players.Count() < 6);
+                    g = Program.Games.FirstOrDefault(x => x.State == GameState.Joining && x.Players.Count() < 6 & !x.IsGroup && x.IsRandom);
                     if (g != null)
                     {
                         var result = g.AddPlayer(c.From);
@@ -445,6 +445,7 @@ namespace CoupForTelegram.Handlers
                 case "start":
                     id = int.Parse(c.Data.Split('|')[1]);
                     g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (g == null) break;
                     if (!g.Players.Any(x => x.Id == c.From.Id))
                     {
                         Bot.ReplyToCallback(c, "You aren't even in the game!", false, true);
