@@ -86,7 +86,8 @@ namespace CoupForTelegram
                 joinTime--;
                 if (Players.Count >= 6 || joinTime == 0)
                 {
-                    StartGame();
+                    if (State == GameState.Joining)
+                        StartGame();
                     return;
                 }
                 Thread.Sleep(500);
@@ -150,6 +151,7 @@ namespace CoupForTelegram
 
         public void StartGame()
         {
+            if (State != GameState.Joining) return;
             LastMenu = null;
             Send("Game is starting!");
             if (Players.Count < 2)
@@ -158,9 +160,11 @@ namespace CoupForTelegram
                 State = GameState.Ended;
                 return;
             }
+            if (State != GameState.Joining) return;
             Program.GamesPlayed++;
             State = GameState.Initializing;
-
+            Players.Shuffle();
+            Players.Shuffle();
             //create db entry for game
             using (var db = new CoupContext())
             {
@@ -190,7 +194,7 @@ namespace CoupForTelegram
                     var dbp = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
                     if (dbp == null)
                     {
-                        dbp = new Player { TelegramId = p.Id, Created = DateTime.UtcNow, Language = "English" };
+                        dbp = new Player { TelegramId = p.Id, Created = DateTime.UtcNow, Language = "English", Name = p.Name, Username = p.TeleUser.Username };
                         db.Players.Add(dbp);
                         db.SaveChanges();
                     }
@@ -245,7 +249,10 @@ namespace CoupForTelegram
                         else
                         {
                             //ok, no, so get actions that they can make
-                            Send($"{p.Name.ToBold()} please choose an action.", menu: CreateActionMenu(p), menuTo: p.Id);
+                            Send($"{p.Name.ToBold()} please choose an action.", p.Id, menu: CreateActionMenu(p), menuTo: p.Id);
+                            LastMenu = null;
+                            if (IsGroup)
+                                Send($"{p.Name.ToBold()} please choose an action.");
                         }
                         var choice = WaitForChoice(ChoiceType.Action);
                         Console.WriteLine($"{p.Name} has chosen to {ChoiceMade}");
@@ -269,7 +276,6 @@ namespace CoupForTelegram
                                     Send($"{p.Name.ToBold()} was not blocked, and has gained two coins.");
                                     DBAddValue(p, Models.ValueType.CoinsCollected, 2);
                                     p.Coins += 2;
-
                                 }
                                 break;
                             case Action.Coup:
@@ -353,8 +359,8 @@ namespace CoupForTelegram
                                     p.Cards.Clear();
                                     var menu = new InlineKeyboardMarkup(new[]
                                     {
-                                    newCards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
-                                });
+                                        newCards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
+                                    });
                                     LastMenu = null;
                                     Send($"{p.Name.ToBold()} was not blocked. Please choose your new cards in PM @{Bot.Me.Username}.");
                                     Send($"{p.Name}, choose your first card", p.Id, menu: menu, menuTo: p.Id, newMsg: true);
@@ -362,6 +368,8 @@ namespace CoupForTelegram
                                     if (CardToLose == "")
                                     {
                                         Send($"Time ran out, moving on");
+                                        p.Cards.AddRange(newCards.Take(count));
+                                        TellCards(p);
                                         break;
                                     }
                                     var card1 = CardToLose;
@@ -372,13 +380,15 @@ namespace CoupForTelegram
                                     {
                                         menu = new InlineKeyboardMarkup(new[]
                                         {
-                                        newCards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
-                                    });
+                                            newCards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
+                                        });
                                         Send($"{p.Name}, choose your second card", p.Id, menu: menu, menuTo: p.Id);
                                         WaitForChoice(ChoiceType.Card);
                                         if (CardToLose == "")
                                         {
                                             Send($"Time ran out, moving on");
+                                            p.Cards.Add(newCards.First());
+                                            TellCards(p);
                                             break;
                                         }
                                         card2 = CardToLose;
@@ -429,6 +439,14 @@ namespace CoupForTelegram
                             default:
                                 LastMenu = null;
                                 Send($"{p.Name.ToBold()} did not do anything, moving on...");
+                                p.AfkCount++;
+                                if (p.AfkCount >= 2)
+                                {
+                                    //out!
+                                    Graveyard.AddRange(p.Cards);
+                                    p.Cards.Clear();
+                                    Send($"{p.Name} is AFK, and is out!");
+                                }
                                 break;
                         }
 
@@ -533,7 +551,7 @@ namespace CoupForTelegram
                     return CardToLose != "";
                 case ChoiceType.Block:
                     //check if ANYONE has blocked, so first person to block is the one that has to deal with it
-                    return Players.Any(x => x.CallBluff == true || x.Block == true) || Players.All(x => x.CallBluff == false && x.Block == false);
+                    return Players.Any(x => x.CallBluff == true || x.Block == true) || Players.Where(x => x.Cards.Count() > 0).All(x => x.CallBluff == false && x.Block == false);
                 default:
                     return true;
             }
@@ -554,33 +572,34 @@ namespace CoupForTelegram
                     canBlock = true;
                     break;
                 case Action.Assassinate:
-                    aMsg = $"{p.Name.ToBold()} has chosen to assassinate {t.Name.ToBold()} [Assassin]. Does anyone want to block / call bluff?";
-                    cardUsed = "Assassin";
+                    cardUsed = "💀 Assassin";
+                    aMsg = $"{p.Name.ToBold()} has chosen to assassinate {t.Name.ToBold()} [{cardUsed}]. Does anyone want to block / call bluff?";
                     canBlock = true;
                     break;
                 case Action.Tax:
-                    aMsg = $"{p.Name.ToBold()} has chosen to take tax (3 coins) [Duke]. Does anyone want to call bluff?";
-                    cardUsed = "Duke";
+                    cardUsed = "💰 Duke";
+                    aMsg = $"{p.Name.ToBold()} has chosen to take tax (3 coins) [{cardUsed}]. Does anyone want to call bluff?";
                     break;
                 case Action.Exchange:
-                    aMsg = $"{p.Name.ToBold()} has chosen to exchange cards with the deck [Ambassador]. Does anyone want to call bluff?";
-                    cardUsed = "Ambassador";
+                    cardUsed = "👳 Ambassador";
+                    aMsg = $"{p.Name.ToBold()} has chosen to exchange cards with the deck [{cardUsed}]. Does anyone want to call bluff?";
+                    
                     break;
                 case Action.Steal:
-                    aMsg = $"{p.Name.ToBold()} has chosen to steal from {t.Name.ToBold()} [Captain]. Does anyone want to block / call bluff?";
-                    cardUsed = "Captain";
+                    cardUsed = "🛡 Captain";
+                    aMsg = $"{p.Name.ToBold()} has chosen to steal from {t.Name.ToBold()} [{cardUsed}]. Does anyone want to block / call bluff?";
                     canBlock = true;
                     break;
                 case Action.BlockSteal:
                     aMsg = $"{p.Name.ToBold()} has chosen to block {t.Name.ToBold()} from stealing [{cardUsed}]. Does anyone want to call bluff?";
                     break;
                 case Action.BlockAssassinate:
-                    cardUsed = "Contessa";
-                    aMsg = $"{p.Name.ToBold()} has chosen to block {t.Name.ToBold()} from assassinating [Contessa]. Does anyone want to call bluff?";
+                    cardUsed = "👠 Contessa";
+                    aMsg = $"{p.Name.ToBold()} has chosen to block {t.Name.ToBold()} from assassinating [{cardUsed}]. Does anyone want to call bluff?";
                     break;
                 case Action.BlockForeignAid:
-                    cardUsed = "Duke";
-                    aMsg = $"{p.Name.ToBold()} has chosen to block {t.Name.ToBold()} from taking foreign aid [Duke]. Does anyone want to call bluff?";
+                    cardUsed = "💰 Duke";
+                    aMsg = $"{p.Name.ToBold()} has chosen to block {t.Name.ToBold()} from taking foreign aid [{cardUsed}]. Does anyone want to call bluff?";
                     break;
             }
             Send(aMsg, menu: CreateBlockMenu(p.Id, canBlock, canBluff), menuNot: p.Id);
@@ -617,7 +636,7 @@ namespace CoupForTelegram
                 if (a == Action.Steal)
                 {
                     //more than one card can block stealing
-                    var menu = new InlineKeyboardMarkup(new[] { "Captain", "Ambassador" }.Select(x => new InlineKeyboardButton(x, $"card|{GameId}|{x}")).ToArray());
+                    var menu = new InlineKeyboardMarkup(new[] { "🛡 Captain", "👳 Ambassador" }.Select(x => new InlineKeyboardButton(x, $"card|{GameId}|{x}")).ToArray());
                     Send($"{blocker.Name.ToBold()} has chosen to block.  Please choose which card you are blocking with", menu: menu);
                     WaitForChoice(ChoiceType.Card);
                     cardUsed = CardToLose;
@@ -627,6 +646,8 @@ namespace CoupForTelegram
                 if (blocked)
                 {
                     DBAddValue(blocker, Models.ValueType.ActionsBlocked);
+                    LastMenu = null;
+                    Send($"{blocker.Name.ToBold()} has blocked {p.Name.ToBold()}");
                 }
                 return !blocked;
             }
@@ -657,6 +678,7 @@ namespace CoupForTelegram
                     Cards.Add(card);
                     p.Cards.Remove(card);
                     Cards.Shuffle();
+                    Cards.Shuffle();
                     card = Cards.First();
                     Cards.Remove(card);
                     p.Cards.Add(card);
@@ -668,10 +690,10 @@ namespace CoupForTelegram
                 {
                     if (p.Cards.Count() == 1)
                     {
-                        PlayerLoseCard(p, bluffer.Cards.First());
+                        PlayerLoseCard(p, p.Cards.First());
                         //Graveyard.Add(p.Cards.First());
                         p.Cards.Clear();
-                        Send($"{p.Name.ToBold()}, your bluff was called.  You are out of cards, and therefore out of the game!");
+                        Send(msg + $"{p.Name.ToBold()}, your bluff was called.  You are out of cards, and therefore out of the game!");
                     }
                     else
                     {
@@ -706,17 +728,25 @@ namespace CoupForTelegram
                     Send($"{p.Name.ToBold()} is out of cards, so out of the game!");
                     return;
                 }
-                var menu = new InlineKeyboardMarkup(new[]
-                                    {
+                else if (p.Cards.Count() == 1)
+                {
+                    card = p.Cards.First();
+                    Send($"{p.Name.ToBold()} is out of cards, so out of the game!");
+                }
+                else
+                {
+                    var menu = new InlineKeyboardMarkup(new[]
+                                        {
                                     p.Cards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
                                 });
-                Send($"Please choose a card to lose", p.Id, menu: menu, newMsg: true, menuTo: p.Id);
-                WaitForChoice(ChoiceType.Card);
+                    Send($"Please choose a card to lose", p.Id, menu: menu, newMsg: true, menuTo: p.Id);
+                    WaitForChoice(ChoiceType.Card);
 
-                if (CardToLose == "")
-                    card = p.Cards.First();
-                else
-                    card = p.Cards.FirstOrDefault(x => x.Name == CardToLose);
+                    if (CardToLose == "")
+                        card = p.Cards.First();
+                    else
+                        card = p.Cards.FirstOrDefault(x => x.Name == CardToLose);
+                }
             }
             p.Cards.Remove(card);
             Graveyard.Add(card);
@@ -759,13 +789,55 @@ namespace CoupForTelegram
         }
         public InlineKeyboardMarkup CreateActionMenu(CPlayer p)
         {
+            var choices = new List<InlineKeyboardButton>();
             //seed choices with all actions
-            var choices = Enum.GetValues(typeof(Action)).Cast<Action>().Where(x => !x.ToString().StartsWith("Block") && x != Action.None).ToList();
+            foreach (var a in Enum.GetValues(typeof(Action)).Cast<Action>())
+            {
+                var icon = PlayerCanDoAction(a, p) ? "✅" : "💢";
+                var data = $"{a}|{GameId}";
+                switch (a)
+                {
+                    case Action.Income:
+                        choices.Add(new InlineKeyboardButton($"{icon} Income (+1)", data));
+                        break;
+                    case Action.ForeignAid:
+                        choices.Add(new InlineKeyboardButton($"{icon} Foreign Aid (+2)", data));
+                        break;
+                    case Action.Coup:
+                        if (p.Coins >= 7)
+                            choices.Add(new InlineKeyboardButton($"{icon} Coup (-7)", data));
+                        break;
+                    case Action.Tax:
+                        choices.Add(new InlineKeyboardButton($"{icon} Tax (+3) 💰", data));
+                        break;
+                    case Action.Assassinate:
+                        if (p.Coins >= 3)
+                            choices.Add(new InlineKeyboardButton($"{icon} Assassinate (-3) 💀", data));
+                        break;
+                    case Action.Exchange:
+                        choices.Add(new InlineKeyboardButton($"{icon} Exchange 👳", data));
+                        break;
+                    case Action.Steal:
+                        choices.Add(new InlineKeyboardButton($"{icon} Steal (+2) 🛡", data));
+                        break;
+                    case Action.BlockSteal:
+                        break;
+                    case Action.BlockAssassinate:
+                        break;
+                    case Action.BlockForeignAid:
+                        break;
+                    case Action.None:
+                        break;
+                    case Action.Concede:
+                        break;
+                }
+            }
+            //var choices = Enum.GetValues(typeof(Action)).Cast<Action>().Where(x => !x.ToString().StartsWith("Block") && x != Action.None && x != Action.Concede).ToList();
             //remove actions player doesn't have the coins for
-            if (p.Coins < 3) choices.Remove(Action.Assassinate);
-            if (p.Coins < 7) choices.Remove(Action.Coup);
+            //if (p.Coins < 3) choices.Remove(Action.Assassinate);
+            //if (p.Coins < 7) choices.Remove(Action.Coup);
             //return choice menu
-            return new InlineKeyboardMarkup(choices.Select(x => new[] { new InlineKeyboardButton(x.ToString(), $"{x}|{GameId}") }).ToArray());
+            return new InlineKeyboardMarkup(choices.Select(x => new[] { x }).ToArray());
         }
         public InlineKeyboardMarkup CreateTargetMenu(CPlayer p)
         {
@@ -777,16 +849,17 @@ namespace CoupForTelegram
         #region Communications
         public void TellCards(CPlayer p)
         {
+            if (p.Cards.Count() == 0) return;
             var cards = p?.Cards.Aggregate("<b>Your cards</b>", (cur, b) => cur + $"\n{b.Name}");
             if (!p.HasCheckedCards)
             {
                 using (var db = new CoupContext())
                 {
-                    var dbp = db.Players.FirstOrDefault(x => x.TelegramId == c.From.Id);
-                    var gp = dbp?.GamePlayers.FirstOrDefault(x => x.GameId == g.DBGameId);
+                    var dbp = db.Players.FirstOrDefault(x => x.TelegramId == p.Id);
+                    var gp = dbp?.GamePlayers.FirstOrDefault(x => x.GameId == DBGameId);
                     if (gp != null)
                     {
-                        gp.LookedAtCardsTurn = g.Round;
+                        gp.LookedAtCardsTurn = Math.Max(Round, 1);
                         db.SaveChanges();
                     }
                 }

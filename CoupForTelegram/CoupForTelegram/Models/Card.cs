@@ -24,7 +24,7 @@ namespace CoupForTelegram.Models
         public Duke()
         {
             ActionsAllowed.AddRange(new[] { Action.BlockForeignAid, Action.Tax });
-            Name = "Duke";
+            Name = "💰 Duke";
         }
     }
 
@@ -32,7 +32,7 @@ namespace CoupForTelegram.Models
     {
         public Contessa()
         {
-            Name = "Contessa";
+            Name = "👠 Contessa";
             ActionsAllowed.AddRange(new[] { Action.BlockAssassinate });
         }
     }
@@ -41,7 +41,7 @@ namespace CoupForTelegram.Models
     {
         public Ambassador()
         {
-            Name = "Ambassador";
+            Name = "👳 Ambassador";
             ActionsAllowed.AddRange(new[] { Action.Exchange, Action.BlockSteal });
         }
     }
@@ -50,7 +50,7 @@ namespace CoupForTelegram.Models
     {
         public Captain()
         {
-            Name = "Captain";
+            Name = "🛡 Captain";
             ActionsAllowed.AddRange(new[] { Action.Steal, Action.BlockSteal });
         }
     }
@@ -59,7 +59,7 @@ namespace CoupForTelegram.Models
     {
         public Assassin()
         {
-            Name = "Assassin";
+            Name = "💀 Assassin";
             ActionsAllowed.AddRange(new[] { Action.Assassinate });
         }
     }

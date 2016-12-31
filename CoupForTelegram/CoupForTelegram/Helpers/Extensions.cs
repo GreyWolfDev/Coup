@@ -34,7 +34,7 @@ namespace CoupForTelegram.Helpers
             using (var db = new CoupContext())
             {
                 var p = db.Players.FirstOrDefault(x => x.TelegramId == u.Id);
-                if (p == null && db.Players.Count() < 52)
+                if (p == null && db.Players.Count() < 100)
                 {
                     p = new Player
                     {

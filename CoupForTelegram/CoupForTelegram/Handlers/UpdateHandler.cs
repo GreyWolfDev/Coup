@@ -16,13 +16,13 @@ namespace CoupForTelegram.Handlers
     {
         internal static void HandleMessage(Message m)
         {
-            if (m.Date < Program.StartTime.AddMinutes(-1))
+            if (m.Date < Program.StartTime.AddSeconds(-10))
                 return;
             //start@coup2bot gameid
 
             //get the command if any
             var cmd = m.Text.Split(' ')[0];
-            cmd = cmd.Replace("@" + Bot.Me.Username, "").Replace("!", "").Replace("/", "");
+            cmd = cmd.Replace("@" + Bot.Me.Username, "").Replace("!", "").Replace("/", "").ToLower();
             if (String.IsNullOrEmpty(cmd)) return;
             Game g;
             //TODO - Move all of these to Commands using reflection
@@ -51,6 +51,9 @@ namespace CoupForTelegram.Handlers
                     break;
                 case "help":
                     Bot.SendAsync("https://www.youtube.com/watch?v=xUNWl5fWfEY", m.Chat.Id);
+                    break;
+                case "ping":
+                    Ping(m);
                     break;
                 case "start":
                     if (!m.From.BetaCheck())
@@ -180,7 +183,10 @@ namespace CoupForTelegram.Handlers
                 if (g != null)
                 {
                     if (g.Turn == c.From.Id)
+                    {
                         g.ChoiceMade = a;
+                        Bot.ReplyToCallback(c, $"Choice accepted: {cmd}");
+                    }
                     else
                         Bot.ReplyToCallback(c, "It's not your turn!", false, true);
                 }
@@ -385,6 +391,11 @@ namespace CoupForTelegram.Handlers
                     Bot.ReplyToCallback(c, $"Great! I've created a game for you.  Click below to send the game to the group!", replyMarkup: new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Click here") { Url = $"https://telegram.me/{Bot.Me.Username}?startgroup={g.GameId}" } }));
                     break;
                 case "join":
+                    if (!c.From.BetaCheck())
+                    {
+                        Bot.ReplyToCallback(c, "Sorry, but beta testing is full.  Please wait until the next beta extension.", false, true);
+                        return;
+                    }
                     id = int.Parse(c.Data.Split('|')[1]);
                     g = Program.Games.FirstOrDefault(x => x.GameId == id);
                     if (g != null)
@@ -409,6 +420,17 @@ namespace CoupForTelegram.Handlers
 
             }
 
+        }
+
+        public static void Ping(Message m)
+        {
+            var ts = DateTime.UtcNow - m.Date;
+            var send = DateTime.UtcNow;
+            var message = $"Time to receive ping message: {ts:mm\\:ss\\.ff}";
+            var result = Bot.SendAsync(message, m.Chat.Id).Result;
+            ts = DateTime.UtcNow - send;
+            message += $"\nTime to send ping message: {ts:mm\\:ss\\.ff}";
+            Bot.Api.EditMessageTextAsync(m.Chat.Id, result.MessageId, message);
         }
 
         private static Game CreateGame(User u, bool group = false, bool random = false, Chat c = null)
