@@ -337,10 +337,10 @@ namespace CoupForTelegram
                                     //unblocked!
                                     if (target.Cards.Count() == 1)
                                     {
+                                        Send($"{target.Name.ToBold()}, you have been assassinated.  You are out of cards, and therefore out of the game!");
                                         PlayerLoseCard(target, target.Cards.First());
                                         //Graveyard.Add(target.Cards.First());
                                         target.Cards.Clear();
-                                        Send($"{target.Name.ToBold()}, you have been assassinated.  You are out of cards, and therefore out of the game!");
                                     }
                                     else
                                     {
@@ -665,10 +665,11 @@ namespace CoupForTelegram
                     //player has a card!
                     if (bluffer.Cards.Count() == 1)
                     {
+                        
+                        Send($"{bluffer.Name.ToBold()}, {p.Name.ToBold()} had {cardUsed.ToBold()}.  You are out of cards, and therefore out of the game!");
                         PlayerLoseCard(bluffer, bluffer.Cards.First());
                         //Graveyard.Add(bluffer.Cards.First());
                         bluffer.Cards.Clear();
-                        Send($"{bluffer.Name.ToBold()}, {p.Name.ToBold()} had {cardUsed.ToBold()}.  You are out of cards, and therefore out of the game!");
                     }
                     else
                     {
@@ -693,10 +694,11 @@ namespace CoupForTelegram
                 {
                     if (p.Cards.Count() == 1)
                     {
+                        
+                        Send(msg + $"{p.Name.ToBold()}, your bluff was called.  You are out of cards, and therefore out of the game!");
                         PlayerLoseCard(p, p.Cards.First());
                         //Graveyard.Add(p.Cards.First());
                         p.Cards.Clear();
-                        Send(msg + $"{p.Name.ToBold()}, your bluff was called.  You are out of cards, and therefore out of the game!");
                     }
                     else
                     {
