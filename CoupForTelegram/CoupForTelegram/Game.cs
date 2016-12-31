@@ -30,7 +30,7 @@ namespace CoupForTelegram
         public int Turn = 0;
         public int ActualTurn = 0;
         public int CounterActionPlayer = 0;
-        public string CardToLose = "";
+        public string CardToLose = null;
         /// <summary>
         /// Is this game for friends only, or strangers
         /// </summary>
@@ -646,10 +646,15 @@ namespace CoupForTelegram
                 {
                     //more than one card can block stealing
                     var menu = new InlineKeyboardMarkup(new[] { "🛡 Captain", "👳 Ambassador" }.Select(x => new InlineKeyboardButton(x, $"card|{GameId}|{x}")).ToArray());
+                    ActualTurn = Turn;
+                    Turn = blocker.Id;
                     Send($"{blocker.Name.ToBold()} has chosen to block.  Please choose which card you are blocking with", menu: menu);
                     WaitForChoice(ChoiceType.Card);
+                    Turn = ActualTurn;
                     cardUsed = CardToLose;
                     CardToLose = null;
+                    if (cardUsed == null)
+                        return true;
                 }
                 var blocked = PlayerMadeBlockableAction(blocker, (Action)Enum.Parse(typeof(Action), "Block" + a.ToString(), true), p, cardUsed);
                 if (blocked)
@@ -756,7 +761,7 @@ namespace CoupForTelegram
                     
                     WaitForChoice(ChoiceType.Card);
                     Turn = ActualTurn;
-                    if (CardToLose == "")
+                    if (CardToLose == null)
                         card = p.Cards.First();
                     else
                         card = p.Cards.FirstOrDefault(x => x.Name == CardToLose);

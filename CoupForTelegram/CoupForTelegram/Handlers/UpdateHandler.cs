@@ -355,7 +355,7 @@ namespace CoupForTelegram.Handlers
                             else
                             {
                                 g.ChoiceTarget = target;
-                                Bot.ReplyToCallback(c, "Choice accepted", false, true);
+                                Bot.ReplyToCallback(c, "Choice accepted");
                             }
                         }
                         else
