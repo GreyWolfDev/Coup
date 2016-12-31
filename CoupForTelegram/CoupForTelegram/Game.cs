@@ -813,32 +813,32 @@ namespace CoupForTelegram
             //seed choices with all actions
             foreach (var a in Enum.GetValues(typeof(Action)).Cast<Action>())
             {
-                var icon = PlayerCanDoAction(a, p) ? "✅" : "💢";
+                var icon = p.HasCheckedCards ? PlayerCanDoAction(a, p) ? "✅ " : "💢 " : "";
                 var data = $"{a}|{GameId}";
                 switch (a)
                 {
                     case Action.Income:
-                        choices.Add(new InlineKeyboardButton($"{icon} Income (+1)", data));
+                        choices.Add(new InlineKeyboardButton($"{icon}Income (+1)", data));
                         break;
                     case Action.ForeignAid:
-                        choices.Add(new InlineKeyboardButton($"{icon} Foreign Aid (+2)", data));
+                        choices.Add(new InlineKeyboardButton($"{icon}Foreign Aid (+2)", data));
                         break;
                     case Action.Coup:
                         if (p.Coins >= 7)
-                            choices.Add(new InlineKeyboardButton($"{icon} Coup (-7)", data));
+                            choices.Add(new InlineKeyboardButton($"{icon}Coup (-7)", data));
                         break;
                     case Action.Tax:
-                        choices.Add(new InlineKeyboardButton($"{icon} Tax (+3) 💰", data));
+                        choices.Add(new InlineKeyboardButton($"{icon}Tax (+3) 💰", data));
                         break;
                     case Action.Assassinate:
                         if (p.Coins >= 3)
-                            choices.Add(new InlineKeyboardButton($"{icon} Assassinate (-3) 💀", data));
+                            choices.Add(new InlineKeyboardButton($"{icon}Assassinate (-3) 💀", data));
                         break;
                     case Action.Exchange:
-                        choices.Add(new InlineKeyboardButton($"{icon} Exchange 👳", data));
+                        choices.Add(new InlineKeyboardButton($"{icon}Exchange 👳", data));
                         break;
                     case Action.Steal:
-                        choices.Add(new InlineKeyboardButton($"{icon} Steal (+2) 🛡", data));
+                        choices.Add(new InlineKeyboardButton($"{icon}Steal (+2) 🛡", data));
                         break;
                     case Action.BlockSteal:
                         break;
