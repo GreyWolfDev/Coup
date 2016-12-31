@@ -16,7 +16,8 @@ namespace CoupForTelegram.Handlers
     {
         internal static void HandleMessage(Message m)
         {
-            if (m.Date < Program.StartTime.AddSeconds(-10))
+           
+            if (m.Date < Program.StartTime.AddSeconds(-5))
                 return;
             //start@coup2bot gameid
 
@@ -68,8 +69,14 @@ namespace CoupForTelegram.Handlers
                     {
                         var id = int.Parse(m.Text.Split(' ')[1]);
                         var startgame = Program.Games.FirstOrDefault(x => x.GameId == id);
+                        
                         if (startgame != null)
                         {
+                            if (Program.Games.Any(x => x.Players.Any(p => p.Id == m.From.Id)))
+                            {
+                                Bot.SendAsync("You are already in a game!", m.From.Id);
+                                return;
+                            }
                             //check if group or PM
                             if (m.Chat.Type == Telegram.Bot.Types.Enums.ChatType.Private)
                             {
@@ -171,6 +178,7 @@ namespace CoupForTelegram.Handlers
 
         internal static void HandleCallback(CallbackQuery c)
         {
+            
             //https://telegram.me/coup2bot?startgroup=gameid
             //https://telegram.me/coup2bot?start=gameid
             var cmd = c.Data;
@@ -278,8 +286,9 @@ namespace CoupForTelegram.Handlers
                     if (g != null)
                     {
                         p = g.Players.FirstOrDefault(x => x.Id == c.From.Id);
-                        if (p != null)
+                        if (p != null && p.Id == g.Turn)
                         {
+
                             g.CardToLose = cardStr;
                             Bot.ReplyToCallback(c, "Choice Accepted - " + cardStr);
                         }
@@ -408,6 +417,11 @@ namespace CoupForTelegram.Handlers
                     }
                     id = int.Parse(c.Data.Split('|')[1]);
                     g = Program.Games.FirstOrDefault(x => x.GameId == id);
+                    if (Program.Games.Any(x => x.Players.Any(pl => pl.Id == c.From.Id)))
+                    {
+                        Bot.ReplyToCallback(c, "You are already in a game!", false, true);
+                        break;
+                    }
                     if (g != null)
                     {
                         var success = g.AddPlayer(c.From);

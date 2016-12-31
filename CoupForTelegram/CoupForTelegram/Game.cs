@@ -130,7 +130,7 @@ namespace CoupForTelegram
             else
                 return 1;
             var name = p.GetName();
-            Send($"{name} has joined the game");
+            Send($"{name} has joined the game", joinMessage: true);
 
             return 0;
         }
@@ -364,20 +364,24 @@ namespace CoupForTelegram
                                         newCards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
                                     });
                                     LastMenu = null;
+                                    Turn = p.Id; //just to be sure
                                     Send($"{p.Name.ToBold()} was not blocked. Please choose your new cards in PM @{Bot.Me.Username}.");
-                                    Send($"{p.Name}, choose your first card", p.Id, menu: menu, menuTo: p.Id, newMsg: true);
+                                    Send($"{p.Name}, choose your first card", p.Id, menu: menu, newMsg: true);
                                     WaitForChoice(ChoiceType.Card);
-                                    if (CardToLose == "")
+                                    if (String.IsNullOrEmpty(CardToLose))
                                     {
                                         Send($"Time ran out, moving on");
                                         p.Cards.AddRange(newCards.Take(count));
                                         TellCards(p);
                                         break;
                                     }
-                                    var card1 = CardToLose;
                                     var card2 = "";
-                                    CardToLose = "";
-                                    newCards.Remove(newCards.First(x => x.Name == card1));
+                                    Console.SetCursorPosition(0, 10);
+                                    Console.WriteLine("Choice: " + CardToLose);
+                                    Console.WriteLine(newCards.Aggregate("", (a, b) => a + "\n" + b.Name));
+                                    newCards.Remove(newCards.First(x => x.Name == CardToLose));
+                                    var card1 = CardToLose;
+                                    CardToLose = null;
                                     if (count == 2)
                                     {
                                         menu = new InlineKeyboardMarkup(new[]
@@ -386,7 +390,7 @@ namespace CoupForTelegram
                                         });
                                         Send($"{p.Name}, choose your second card", p.Id, menu: menu, menuTo: p.Id);
                                         WaitForChoice(ChoiceType.Card);
-                                        if (CardToLose == "")
+                                        if (String.IsNullOrEmpty(CardToLose))
                                         {
                                             Send($"Time ran out, moving on");
                                             p.Cards.Add(newCards.First());
@@ -532,6 +536,8 @@ namespace CoupForTelegram
         /// <returns>Whether or not a choice was actually made</returns>
         private Action WaitForChoice(ChoiceType type, int timeToChoose = 60)
         {
+            if (type == ChoiceType.Card)
+                CardToLose = null;
             while (!HasChoiceBeenMade(type) && timeToChoose > 0)
             {
                 Thread.Sleep(500);
@@ -551,7 +557,7 @@ namespace CoupForTelegram
                 case ChoiceType.Target:
                     return ChoiceTarget != 0;
                 case ChoiceType.Card:
-                    return CardToLose != "";
+                    return CardToLose != null;
                 case ChoiceType.Block:
                     //check if ANYONE has blocked, so first person to block is the one that has to deal with it
                     return Players.Any(x => x.CallBluff == true || x.Block == true) || Players.Where(x => x.Cards.Count() > 0).All(x => x.CallBluff == false && x.Block == false);
@@ -643,7 +649,7 @@ namespace CoupForTelegram
                     Send($"{blocker.Name.ToBold()} has chosen to block.  Please choose which card you are blocking with", menu: menu);
                     WaitForChoice(ChoiceType.Card);
                     cardUsed = CardToLose;
-                    CardToLose = "";
+                    CardToLose = null;
                 }
                 var blocked = PlayerMadeBlockableAction(blocker, (Action)Enum.Parse(typeof(Action), "Block" + a.ToString(), true), p, cardUsed);
                 if (blocked)
@@ -744,9 +750,12 @@ namespace CoupForTelegram
                                         {
                                     p.Cards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
                                 });
+                    ActualTurn = Turn;
+                    Turn = p.Id;
                     Send($"Please choose a card to lose", p.Id, menu: menu, newMsg: true, menuTo: p.Id);
+                    
                     WaitForChoice(ChoiceType.Card);
-
+                    Turn = ActualTurn;
                     if (CardToLose == "")
                         card = p.Cards.First();
                     else
@@ -888,7 +897,7 @@ namespace CoupForTelegram
                             newMenu = null;
                         if (menuTo != 0 && menuTo != p.Id)
                             newMenu = null;
-                        result.AddRange(Send(message, p.Id, clearKeyboard, newMenu, newMsg));
+                        result.AddRange(Send(message, p.Id, clearKeyboard, newMenu, newMsg, joinMessage: joinMessage));
                     }
                 }
             }
@@ -908,7 +917,9 @@ namespace CoupForTelegram
                     }
                     else if (last == 0 && joinMessage)
                     {
-                        message = Players.First().LastMessageSent + Environment.NewLine + message;
+                        if (Players.First().Id != id)
+                            message = Players.First().LastMessageSent;
+                        
                         r = Bot.SendAsync(message, id, customMenu: menu ?? LastMenu).Result;
                     }
                     else
