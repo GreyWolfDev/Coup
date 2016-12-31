@@ -64,13 +64,12 @@ namespace CoupForTelegram
 
         static void Monitor()
         {
-            return;
             while (true)
             {
-                var msg = $"Games: {Games.Count()}\tPlayers: {Games.Sum(x => x.Players.Count())}\nTotal Games Played: {GamesPlayed}\nUptime: {DateTime.UtcNow - StartTime}";
-                Console.Clear();
+                var msg = $"Games: {Games.Count()}   \nPlayers: {Games.Sum(x => x.Players.Count())}   \nTotal Games Played: {GamesPlayed}\nUptime: {DateTime.UtcNow - StartTime}";
+                Console.SetCursorPosition(0, 0);
                 Console.WriteLine(msg);
-                Thread.Sleep(5000);
+                Thread.Sleep(1000);
             }
         }
 

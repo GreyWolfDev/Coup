@@ -21,6 +21,7 @@ namespace CoupForTelegram
 
         internal static TelegramBotClient Api;
         internal static User Me;
+        internal static int Para = 129046388;
         internal static string RootDirectory
         {
             get
@@ -31,6 +32,9 @@ namespace CoupForTelegram
                 return Path.GetDirectoryName(path);
             }
         }
+
+        public static bool Maintenance { get; internal set; }
+
         internal static void Initialize()
         {
             var key = RegistryKey.OpenBaseKey(RegistryHive.LocalMachine, RegistryView.Registry64)

@@ -213,11 +213,11 @@ namespace CoupForTelegram
             }
             //DEBUG OUT
 #if DEBUG
-            for (int i = 0; i < Players.Count(); i++)
-            {
-                Console.WriteLine($"Player {i}: {Players[i].Cards[0].Name}, {Players[i].Cards[1].Name}");
-            }
-            Console.WriteLine($"Deck:\n{Cards.Aggregate("", (a, b) => a + "\n" + b.Name)}");
+            //for (int i = 0; i < Players.Count(); i++)
+            //{
+            //    Console.WriteLine($"Player {i}: {Players[i].Cards[0].Name}, {Players[i].Cards[1].Name}");
+            //}
+            //Console.WriteLine($"Deck:\n{Cards.Aggregate("", (a, b) => a + "\n" + b.Name)}");
 #endif
             State = GameState.Running;
 
@@ -281,6 +281,7 @@ namespace CoupForTelegram
                                 DBAddValue(p, Models.ValueType.PlayersCouped);
                                 if (target == null)
                                 {
+                                    LastMenu = null;
                                     Send($"{p.Name.ToBold()} did not choose in time, and has lost 7 coins");
                                     break;
                                 }
@@ -290,6 +291,7 @@ namespace CoupForTelegram
                                     PlayerLoseCard(target, target.Cards.First());
                                     //Graveyard.Add(target.Cards.First());
                                     target.Cards.Clear();
+                                    LastMenu = null;
                                     Send($"{target.Name.ToBold()}, you have been couped.  You are out of cards, and therefore out of the game!");
                                 }
                                 else
@@ -316,6 +318,7 @@ namespace CoupForTelegram
                                 target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
                                 if (target == null)
                                 {
+                                    LastMenu = null;
                                     Send($"{p.Name.ToBold()} did not choose in time, and has lost 3 coins!");
                                     break;
 
@@ -402,7 +405,9 @@ namespace CoupForTelegram
                                 target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
                                 if (target == null)
                                 {
+                                    LastMenu = null;
                                     Send($"{p.Name.ToBold()} did not choose in time");
+                                    break;
                                 }
                                 if (PlayerMadeBlockableAction(p, choice, target, "Captain"))
                                 {
@@ -418,9 +423,11 @@ namespace CoupForTelegram
                             case Action.Concede:
                                 Graveyard.AddRange(p.Cards);
                                 p.Cards.Clear();
+                                LastMenu = null;
                                 Send($"{p.Name} has chosen to concede the game, and is out!");
                                 break;
                             default:
+                                LastMenu = null;
                                 Send($"{p.Name.ToBold()} did not do anything, moving on...");
                                 break;
                         }
@@ -449,6 +456,7 @@ namespace CoupForTelegram
                                 g.TimeEnded = DateTime.UtcNow;
                                 db.SaveChanges();
                             }
+                            LastMenu = null;
                             Send($"{winner.GetName()} has won the game!", newMsg: true);
                             State = GameState.Ended;
                             return;
@@ -652,7 +660,8 @@ namespace CoupForTelegram
                     card = Cards.First();
                     Cards.Remove(card);
                     p.Cards.Add(card);
-                    Send($"You have lost your {cardUsed}.  Your new card is " + card.Name, p.Id, newMsg: true);
+                    Send($"You have lost your {cardUsed}.", p.Id, newMsg: true);
+                    TellCards(p);
                     return true;
                 }
                 else
@@ -692,6 +701,11 @@ namespace CoupForTelegram
             //send menu
             if (card == null)
             {
+                if (p.Cards.Count() == 0)
+                {
+                    Send($"{p.Name.ToBold()} is out of cards, so out of the game!");
+                    return;
+                }
                 var menu = new InlineKeyboardMarkup(new[]
                                     {
                                     p.Cards.Select(x => new InlineKeyboardButton(x.Name, $"card|{GameId}|{x.Name}")).ToArray()
@@ -706,6 +720,7 @@ namespace CoupForTelegram
             }
             p.Cards.Remove(card);
             Graveyard.Add(card);
+            TellCards(p);
             LastMenu = null;
             Send($"{p.Name.ToBold()} has lost {card.Name.ToBold()}.  It is now in the graveyard.");
         }
@@ -762,7 +777,22 @@ namespace CoupForTelegram
         #region Communications
         public void TellCards(CPlayer p)
         {
-            Send(p.Cards.Aggregate("Your cards:\n", (a, b) => a + "\n" + b.Name), p.Id, newMsg: true).ToList();
+            var cards = p?.Cards.Aggregate("<b>Your cards</b>", (cur, b) => cur + $"\n{b.Name}");
+            if (!p.HasCheckedCards)
+            {
+                using (var db = new CoupContext())
+                {
+                    var dbp = db.Players.FirstOrDefault(x => x.TelegramId == c.From.Id);
+                    var gp = dbp?.GamePlayers.FirstOrDefault(x => x.GameId == g.DBGameId);
+                    if (gp != null)
+                    {
+                        gp.LookedAtCardsTurn = g.Round;
+                        db.SaveChanges();
+                    }
+                }
+                p.HasCheckedCards = true;
+            }
+            Send(cards, p.Id, newMsg: true).ToList();
         }
         private List<Message> Send(string message, long id = 0, bool clearKeyboard = false, InlineKeyboardMarkup menu = null, bool newMsg = false, int menuTo = 0, int menuNot = 0, bool specialMenu = false)
         {

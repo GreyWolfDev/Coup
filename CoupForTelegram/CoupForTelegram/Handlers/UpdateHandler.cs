@@ -97,17 +97,26 @@ namespace CoupForTelegram.Handlers
 
                     }
                     break;
-                case "join":
-
+                case "maint":
+                    if (m.From.Id == Bot.Para)
+                    {
+                        Bot.Maintenance = true;
+                        Bot.SendAsync("Maintenance mode enabled, no new games", m.Chat.Id);
+                    }
                     break;
                 case "newgame":
+                    if (Bot.Maintenance)
+                    {
+                        Bot.SendAsync("Cannot start game, bot is about to restart for patching", m.Chat.Id);
+                        return;
+                    }
                     if (!m.From.BetaCheck())
                     {
                         Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
                         return;
                     }
                     Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdEE_fl3Jmsi7TL02_A", m.Chat.Id);
-                    Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
+                    //Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     //check to see if an existing game is already being played.
                     // if group, just look for a group game with the chat id
                     // if PM, look for a game with the user as one of the players (alive)
@@ -225,7 +234,7 @@ namespace CoupForTelegram.Handlers
                             var gp = dbp?.GamePlayers.FirstOrDefault(x => x.GameId == g.DBGameId);
                             if (gp != null)
                             {
-                                gp.LookedAtCardsTurn = g.Round;
+                                gp.LookedAtCardsTurn = Math.Max(g.Round, 1);
                                 db.SaveChanges();
                             }
                         }
@@ -367,7 +376,7 @@ namespace CoupForTelegram.Handlers
                         g = CreateGame(c.From, false, true);
                         Bot.ReplyToCallback(c, $"There were no games available, so I have created a new game for you.  Please wait for others to join!", replyMarkup: new InlineKeyboardMarkup(new[] { new InlineKeyboardButton("Start Game", $"start|{g.GameId}") }));
                     }
-                    Console.WriteLine($"{c.From.FirstName} has joined game: {g.GameId}");
+                    //Console.WriteLine($"{c.From.FirstName} has joined game: {g.GameId}");
                     break;
                 case "sgg":
                     if (Program.Games.Any(x => x.Players.Any(pl => pl.Id == c.From.Id)))
