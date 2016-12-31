@@ -131,6 +131,11 @@ namespace CoupForTelegram.Handlers
                         Bot.Api.SendTextMessageAsync(m.Chat.Id, "Sorry, but beta testing is full.  Please wait until the next beta extension.", replyToMessageId: m.MessageId);
                         return;
                     }
+                    if (m.Chat.Id == -1001094680157)
+                    {
+                        Bot.SendAsync("This group is for feedback.  Please join https://telegram.me/joinchat/B7EXdEDhVB6A6RL6Mi3Hvw to play, or play in PM", m.Chat.Id);
+                        return;
+                    }
                     Bot.SendAsync("During the beta, we ask that players join the beta feedback group: https://telegram.me/joinchat/B7EXdEE_fl3Jmsi7TL02_A", m.Chat.Id);
                     //Console.WriteLine(m.From.FirstName + ": " + m.From.Username + ": " + m.From.Id);
                     //check to see if an existing game is already being played.
