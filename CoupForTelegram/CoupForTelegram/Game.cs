@@ -233,6 +233,7 @@ namespace CoupForTelegram
                     //will use break to end the game
                     foreach (var p in Players)
                     {
+                        Cards.Shuffle();
                         if (p.Cards.Count() == 0)
                             continue;
                         Turn = p.Id;
