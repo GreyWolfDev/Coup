@@ -23,6 +23,7 @@ namespace CoupForTelegram.Handlers
 
             //get the command if any
             var cmd = m.Text.Split(' ')[0];
+            if (!cmd.StartsWith("!") & !cmd.StartsWith("/")) return;
             cmd = cmd.Replace("@" + Bot.Me.Username, "").Replace("!", "").Replace("/", "").ToLower();
             if (String.IsNullOrEmpty(cmd)) return;
             Game g;
