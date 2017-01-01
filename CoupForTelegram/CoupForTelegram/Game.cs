@@ -298,6 +298,7 @@ namespace CoupForTelegram
                                 {
                                     LastMenu = null;
                                     Send($"{p.Name.ToBold()} did not choose in time, and has lost 7 coins");
+                                    Send("Times up!", p.Id, menuTo: p.Id);
                                     break;
                                 }
 
@@ -342,6 +343,7 @@ namespace CoupForTelegram
                                 if (target == null)
                                 {
                                     LastMenu = null;
+                                    Send("Times up!", p.Id, menuTo: p.Id);
                                     Send($"{p.Name.ToBold()} did not choose in time, and has lost 3 coins!");
                                     break;
 
@@ -444,6 +446,7 @@ namespace CoupForTelegram
                                 if (target == null)
                                 {
                                     LastMenu = null;
+                                    Send("Times up!", p.Id, menuTo: p.Id);
                                     Send($"{p.Name.ToBold()} did not choose in time");
                                     break;
                                 }
