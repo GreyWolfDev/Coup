@@ -810,7 +810,10 @@ namespace CoupForTelegram
                     WaitForChoice(ChoiceType.Card);
                     Turn = ActualTurn;
                     if (CardToLose == null)
+                    {
                         card = p.Cards.First();
+                        Send($"I chose for you, you lost {card}", p.Id);
+                    }
                     else
                         card = p.Cards.FirstOrDefault(x => x.Name == CardToLose);
                 }
