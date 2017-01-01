@@ -96,10 +96,10 @@ namespace CoupForTelegram
         {
             //first answer the callback
             Bot.Api.AnswerCallbackQueryAsync(query.Id, edit ? null : text, showAlert, null, 0);
-            if (!edit & !showAlert)
-            {
-                SendAsync(text, query.From.Id, customMenu: replyMarkup);
-            }
+            //if (!edit & !showAlert)
+            //{
+            //    SendAsync(text, query.From.Id, customMenu: replyMarkup);
+            //}
             //edit the original message
             if (edit)
                 Edit(query, text, replyMarkup);
