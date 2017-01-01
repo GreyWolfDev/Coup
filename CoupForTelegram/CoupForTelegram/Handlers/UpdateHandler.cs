@@ -331,7 +331,7 @@ namespace CoupForTelegram.Handlers
                                         break;
                                 }
 
-                                Bot.ReplyToCallback(c, "Choice accepted", false, true);
+                                Bot.ReplyToCallback(c, "Choice accepted", false, false);
                             }
                         }
                         else

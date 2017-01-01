@@ -95,7 +95,7 @@ namespace CoupForTelegram
         internal static void ReplyToCallback(CallbackQuery query, string text = null, bool edit = true, bool showAlert = false, InlineKeyboardMarkup replyMarkup = null)
         {
             //first answer the callback
-            Bot.Api.AnswerCallbackQueryAsync(query.Id, edit ? null : showAlert ? text : null, showAlert, null, 0);
+            Bot.Api.AnswerCallbackQueryAsync(query.Id, edit ? null : text, showAlert, null, 0);
             if (!edit & !showAlert)
             {
                 SendAsync(text, query.From.Id, customMenu: replyMarkup);
