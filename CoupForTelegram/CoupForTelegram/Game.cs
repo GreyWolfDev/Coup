@@ -394,9 +394,7 @@ namespace CoupForTelegram
                                         break;
                                     }
                                     var card2 = "";
-                                    Console.SetCursorPosition(0, 10);
-                                    Console.WriteLine("Choice: " + CardToLose);
-                                    Console.WriteLine(newCards.Aggregate("", (a, b) => a + "\n" + b.Name));
+                                    
                                     newCards.Remove(newCards.First(x => x.Name == CardToLose));
                                     var card1 = CardToLose;
                                     CardToLose = null;
@@ -970,10 +968,18 @@ namespace CoupForTelegram
                         message = lastStr + Environment.NewLine + message;
                         r = Bot.Edit(id, last, message, menu ?? LastMenu).Result;
                     }
-                    else if (last == 0 && joinMessage)
+                    else if ((IsGroup || last == 0) && joinMessage)
                     {
-                        if (Players.First().Id != id)
-                            message = Players.First().LastMessageSent;
+                        if (IsGroup)
+                        {
+                            LastMessageSent = "";
+                            message = Players.Aggregate(message, (c, v) => c + v.GetName() + " has joined\n");
+                        }
+                        else
+                        {
+                            p.LastMessageSent = "";
+                            message = Players.Aggregate(message, (c, v) => c + v.GetName() + " has joined\n");
+                        }
                         
                         r = Bot.SendAsync(message, id, customMenu: menu ?? LastMenu).Result;
                     }
