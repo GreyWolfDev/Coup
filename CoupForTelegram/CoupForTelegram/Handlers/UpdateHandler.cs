@@ -474,11 +474,11 @@ namespace CoupForTelegram.Handlers
             }
             catch (AggregateException e)
             {
-                Bot.SendAsync($"Error: {e.InnerExceptions[0].Message}", m.Chat.Id);
+                Bot.ReplyToCallback(c, $"Error: {e.InnerExceptions[0].Message}");
             }
             catch (Exception e)
             {
-                Bot.SendAsync($"Error: {e.Message}\n{e.StackTrace}", m.Chat.Id);
+                Bot.ReplyToCallback(c, $"Error: {e.Message}\n{e.StackTrace}");
             }
         }
 
