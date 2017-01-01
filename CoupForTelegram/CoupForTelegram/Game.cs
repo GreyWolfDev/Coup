@@ -130,7 +130,7 @@ namespace CoupForTelegram
             else
                 return 1;
             var name = p.GetName();
-            Send($"{name} has joined the game", joinMessage: true);
+            Send($"", joinMessage: true);
 
             return 0;
         }
@@ -963,7 +963,7 @@ namespace CoupForTelegram
                     var p = Players.FirstOrDefault(x => x.Id == id);
                     var last = p?.LastMessageId ?? LastMessageId;
                     var lastStr = p?.LastMessageSent ?? LastMessageSent;
-                    if (last != 0 & !newMsg)
+                    if (last != 0 & !newMsg &! joinMessage)
                     {
                         message = lastStr + Environment.NewLine + message;
                         r = Bot.Edit(id, last, message, menu ?? LastMenu).Result;
@@ -974,14 +974,14 @@ namespace CoupForTelegram
                         {
                             LastMessageSent = "";
                             message = Players.Aggregate(message, (c, v) => c + v.GetName() + " has joined\n");
+                            r = Bot.Edit(ChatId, last, message, LastMenu).Result;
                         }
                         else
                         {
                             p.LastMessageSent = "";
                             message = Players.Aggregate(message, (c, v) => c + v.GetName() + " has joined\n");
+                            r = Bot.SendAsync(message, id, customMenu: menu ?? LastMenu).Result;
                         }
-                        
-                        r = Bot.SendAsync(message, id, customMenu: menu ?? LastMenu).Result;
                     }
                     else
                     {

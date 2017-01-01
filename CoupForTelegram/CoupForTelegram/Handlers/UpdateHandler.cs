@@ -235,8 +235,8 @@ namespace CoupForTelegram.Handlers
                             break;
                         }
                         //player wants status
-                        var msg = g.Players.Aggregate("<b>Players</b>", (cur, b) => cur + $"\n{b.GetName()}: {b.Cards.Count} card(s), {b.Coins} coin(s)");
-                        Bot.ReplyToCallback(c, msg, false, false);
+                        var msg = g.Players.Where(x => x.Cards.Count > 0).Aggregate("Cards - Coins - Name", (cur, b) => cur + $"\n{b.Cards.Count} - {(b.Coins > 9 ? b.Coins.ToString() : "0" + b.Coins)} - {b.Name}");
+                        Bot.ReplyToCallback(c, msg, false, true);
                         break;
                     case "grave":
                         id = int.Parse(c.Data.Split('|')[1]);
@@ -247,8 +247,8 @@ namespace CoupForTelegram.Handlers
                             break;
                         }
                         //player wants graveyard
-                        var grave = g.Graveyard.Aggregate("<b>Graveyard</b>", (cur, b) => cur + $"\n{b.Name}");
-                        Bot.ReplyToCallback(c, grave, false, false);
+                        var grave = g.Graveyard.Aggregate("Graveyard", (cur, b) => cur + $"\n{b.Name}");
+                        Bot.ReplyToCallback(c, grave, false, true);
                         break;
                     case "cards":
                         id = int.Parse(c.Data.Split('|')[1]);
@@ -261,7 +261,7 @@ namespace CoupForTelegram.Handlers
                         //player wants graveyard
                         var player = g.Players.FirstOrDefault(x => x.Id == c.From.Id);
 
-                        var cards = player?.Cards.Aggregate("<b>Your cards</b>", (cur, b) => cur + $"\n{b.Name}");
+                        var cards = player?.Cards.Aggregate("Your cards", (cur, b) => cur + $"\n{b.Name}");
                         if (!player.HasCheckedCards)
                         {
                             using (var db = new CoupContext())
@@ -276,7 +276,7 @@ namespace CoupForTelegram.Handlers
                             }
                             player.HasCheckedCards = true;
                         }
-                        Bot.ReplyToCallback(c, cards, false, false);
+                        Bot.ReplyToCallback(c, cards, false, true);
                         break;
                     case "concede":
                         id = int.Parse(c.Data.Split('|')[1]);
@@ -288,7 +288,7 @@ namespace CoupForTelegram.Handlers
                         }
                         if (g.Turn != c.From.Id)
                         {
-                            Bot.ReplyToCallback(c, "Please concede on your turn only", false, false);
+                            Bot.ReplyToCallback(c, "Please concede on your turn only", false, true);
                             break;
                         }
                         g.Concede();
