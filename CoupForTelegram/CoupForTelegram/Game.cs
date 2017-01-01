@@ -387,6 +387,7 @@ namespace CoupForTelegram
                                     WaitForChoice(ChoiceType.Card);
                                     if (String.IsNullOrEmpty(CardToLose))
                                     {
+                                        LastMenu = null;
                                         Send($"Time ran out, moving on");
                                         p.Cards.AddRange(newCards.Take(count));
                                         TellCards(p);
@@ -409,6 +410,7 @@ namespace CoupForTelegram
                                         WaitForChoice(ChoiceType.Card);
                                         if (String.IsNullOrEmpty(CardToLose))
                                         {
+                                            LastMenu = null;
                                             Send($"Time ran out, moving on");
                                             p.Cards.Add(newCards.First());
                                             TellCards(p);
