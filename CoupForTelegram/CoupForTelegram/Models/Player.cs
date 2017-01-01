@@ -11,7 +11,21 @@ namespace CoupForTelegram.Models
     {
         public int Id { get; set; }
         public User TeleUser { get; set; }
-        public string Name { get; set; }
+        private string _name;
+        public string Name
+        {
+            get { return _name; }
+            set
+            {
+                _name = value;
+                if (_name.Length > 20)
+                {
+                    _name = _name.Substring(0, 20);
+                    if (_name.LastIndexOf(' ') > 15)
+                        _name = _name.Substring(0, _name.LastIndexOf(' '));
+                }
+            }
+        }
         public List<Card> Cards { get; set; } = new List<Card>();
         public int Coins { get; set; } = 2;
         public int LastMessageId { get; set; } = 0;
