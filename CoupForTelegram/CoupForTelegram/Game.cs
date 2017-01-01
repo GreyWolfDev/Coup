@@ -555,13 +555,37 @@ namespace CoupForTelegram
         /// </summary>
         /// <param name="timeToChoose">Time in half seconds to choose</param>
         /// <returns>Whether or not a choice was actually made</returns>
-        private Action WaitForChoice(ChoiceType type, int timeToChoose = 60)
+        private Action WaitForChoice(ChoiceType type, int Id = 0, bool canBlock = false, bool canBluff = false, int timeToChoose = 60)
         {
             if (type == ChoiceType.Card)
                 CardToLose = null;
+            var allowed = 0;
+            
             while (!HasChoiceBeenMade(type) && timeToChoose > 0)
             {
                 Thread.Sleep(500);
+                if (type == ChoiceType.Block)
+                {
+                    var temp = Players.Count(x => x.Cards.Count() > 0 && x.Block == false && x.CallBluff == false) - 1;
+                    if (temp != allowed)
+                    {
+                        allowed = temp;
+                        //group or PM
+                        if (IsGroup)
+                        {
+                            var r = Bot.Edit(ChatId, LastMessageId, LastMessageSent, CreateBlockMenu(Id, canBlock, canBluff, allowed)).Result;
+                            LastMessageId = r.MessageId;
+                        }
+                        else
+                        {
+                            foreach (var p in Players.Where(x => x.Cards.Count() > 0 && x.Id != Id))
+                            {
+                                var r = Bot.Edit(p.Id, p.LastMessageId, p.LastMessageSent, CreateBlockMenu(Id, canBlock, canBluff, allowed)).Result;
+                                p.LastMessageId = r.MessageId;
+                            }
+                        }
+                    }
+                }
                 timeToChoose--;
             }
 
@@ -653,7 +677,7 @@ namespace CoupForTelegram
 
             }
 
-            WaitForChoice(ChoiceType.Block);
+            WaitForChoice(ChoiceType.Block, p.Id, canBlock, canBluff);
             Turn = ActualTurn;
             //check to see if anyone called block or bluff
             bluffer = Players.FirstOrDefault(x => x.CallBluff == true);
@@ -814,14 +838,14 @@ namespace CoupForTelegram
         //    });
         //}
 
-        public InlineKeyboardMarkup CreateBlockMenu(int id, bool canBlock, bool canBluff = true)
+        public InlineKeyboardMarkup CreateBlockMenu(int id, bool canBlock, bool canBluff = true, int allowed = 0)
         {
             ActualTurn = Turn;
             Turn = id;
             var choices = new List<InlineKeyboardButton>();
             if (canBluff)
                 choices.Add(new InlineKeyboardButton("Call Bluff", $"bluff|call|{GameId}"));
-            choices.Add(new InlineKeyboardButton("Allow", $"bluff|allow|{GameId}"));
+            choices.Add(new InlineKeyboardButton($"Allow ({allowed})", $"bluff|allow|{GameId}"));
             if (canBlock)
                 choices.Add(new InlineKeyboardButton("Block", $"bluff|block|{GameId}"));
             return new InlineKeyboardMarkup(choices.ToArray());
