@@ -250,7 +250,7 @@ namespace CoupForTelegram
                         else
                         {
                             //ok, no, so get actions that they can make
-                            Send($"{p.Name.ToBold()} please choose an action.", p.Id, menu: CreateActionMenu(p), menuTo: p.Id);
+                            Send($"{p.Name.ToBold()} please choose an action.", p.Id, menu: CreateActionMenu(p), menuTo: p.Id, newMsg: true);
                             LastMenu = null;
                             if (IsGroup)
                                 Send($"{p.Name.ToBold()} please choose an action.");
