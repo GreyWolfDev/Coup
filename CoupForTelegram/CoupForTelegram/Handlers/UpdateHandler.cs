@@ -451,6 +451,11 @@ namespace CoupForTelegram.Handlers
                         Bot.ReplyToCallback(c, "You aren't even in the game!", false, true);
                         return;
                     }
+                    if (g.Players.First().Id != c.From.Id)
+                    {
+                        Bot.ReplyToCallback(c, "Only game creator can start the game", false, true);
+                        return;
+                    }
                     g?.StartGame();
                     break;
 
