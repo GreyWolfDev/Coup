@@ -32,6 +32,45 @@ namespace CoupForTelegram.Handlers
                 //basic commands
                 switch (cmd)
                 {
+                    case "addbeta":
+                        //adds the player to the beta
+                        var u = m.ReplyToMessage?.From;
+                        if (u == null)
+                        {
+                            Bot.SendAsync("Reply to a user to add them to the beta", m.Chat.Id);
+                            return;
+                        }
+
+                        using (var db = new CoupContext())
+                        {
+                            var p = db.Players.FirstOrDefault(x => x.TelegramId == u.Id);
+                            if (p != null)
+                            {
+                                Bot.SendAsync("User is already in the beta!", m.Chat.Id);
+                                return;
+                            }
+                            p = new Player { Created = DateTime.UtcNow, Language = "English", Name = (u.FirstName + " " + u.LastName).Trim(), TelegramId = u.Id, Username = u.Username };
+                            db.Players.Add(p);
+                            db.SaveChanges();
+                            Bot.SendAsync($"{p.Name} has been added to Coup Beta", m.Chat.Id);
+                        }
+                        break;
+                    case "removeuseless":
+                        using (var db = new CoupContext())
+                        {
+                            var delete = db.Players.FirstOrDefault(x => x.TelegramId == 0);
+                            var dropPlayers = db.Players.Where(x => x.GamePlayers.Count <= 1);
+                            var count = dropPlayers.Count();
+                            var gps = dropPlayers.SelectMany(x => x.GamePlayers).Select(x => x.Id).ToList();
+                            var dropGp = db.GamePlayers.Where(x => gps.Contains(x.Id));
+                            foreach (var d in dropGp)
+                                d.PlayerId = delete.Id;
+                            foreach (var p in dropPlayers)
+                                db.Players.Remove(p);
+                            db.SaveChanges();
+                            Bot.SendAsync($"Removed {count} players from beta", m.Chat.Id);
+                        }
+                        break;
                     case "stats":
                         var stats = $"<b>Stats for {m.From.FirstName.FormatHTML()}</b>\n";
                         using (var db = new CoupContext())
