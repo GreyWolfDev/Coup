@@ -33,6 +33,7 @@ namespace CoupForTelegram.Handlers
                 switch (cmd)
                 {
                     case "addbeta":
+                        if (m.From.Id != Bot.Para) return;
                         //adds the player to the beta
                         var u = m.ReplyToMessage?.From;
                         if (u == null)
@@ -56,6 +57,7 @@ namespace CoupForTelegram.Handlers
                         }
                         break;
                     case "removeuseless":
+                        if (m.From.Id != Bot.Para) return;
                         using (var db = new CoupContext())
                         {
                             var delete = db.Players.FirstOrDefault(x => x.TelegramId == 0);
