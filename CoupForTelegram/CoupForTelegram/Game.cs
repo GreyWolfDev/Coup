@@ -849,9 +849,9 @@ namespace CoupForTelegram
             ActualTurn = Turn;
             Turn = id;
             var choices = new List<InlineKeyboardButton>();
+            choices.Add(new InlineKeyboardButton($"Allow ({allowed})", $"bluff|allow|{GameId}"));
             if (canBluff)
                 choices.Add(new InlineKeyboardButton("Call Bluff", $"bluff|call|{GameId}"));
-            choices.Add(new InlineKeyboardButton($"Allow ({allowed})", $"bluff|allow|{GameId}"));
             if (canBlock)
                 choices.Add(new InlineKeyboardButton("Block", $"bluff|block|{GameId}"));
             return new InlineKeyboardMarkup(choices.ToArray());
