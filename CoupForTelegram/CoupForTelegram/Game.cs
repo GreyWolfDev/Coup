@@ -339,7 +339,7 @@ namespace CoupForTelegram
                                     WaitForChoice(ChoiceType.Target);
                                     target = Players.FirstOrDefault(x => x.Id == ChoiceTarget);
                                 }
-                                
+
                                 if (target == null)
                                 {
                                     LastMenu = null;
@@ -394,7 +394,7 @@ namespace CoupForTelegram
                                         break;
                                     }
                                     var card2 = "";
-                                    
+
                                     newCards.Remove(newCards.First(x => x.Name == CardToLose));
                                     var card1 = CardToLose;
                                     CardToLose = null;
@@ -563,7 +563,7 @@ namespace CoupForTelegram
             if (type == ChoiceType.Card)
                 CardToLose = null;
             var allowed = 0;
-            
+
             while (!HasChoiceBeenMade(type) && timeToChoose > 0)
             {
                 Thread.Sleep(500);
@@ -640,7 +640,7 @@ namespace CoupForTelegram
                 case Action.Exchange:
                     cardUsed = "👳 Ambassador";
                     aMsg = $"{p.Name.ToBold()} has chosen to exchange cards with the deck [{cardUsed}]. Does anyone want to call bluff?";
-                    
+
                     break;
                 case Action.Steal:
                     cardUsed = "🛡 Captain";
@@ -663,7 +663,7 @@ namespace CoupForTelegram
 
             foreach (var pl in Players)
             {
-                if (canBlock)
+                if (canBlock && pl.Id == t?.Id)
                     pl.Block = null;
                 else
                     pl.Block = false;
@@ -724,7 +724,7 @@ namespace CoupForTelegram
                     //player has a card!
                     if (bluffer.Cards.Count() == 1)
                     {
-                        
+
                         Send($"{bluffer.Name.ToBold()}, {p.Name.ToBold()} had {cardUsed.ToBold()}.  You are out of cards, and therefore out of the game!");
                         PlayerLoseCard(bluffer, bluffer.Cards.First());
                         //Graveyard.Add(bluffer.Cards.First());
@@ -737,23 +737,31 @@ namespace CoupForTelegram
                         PlayerLoseCard(bluffer);
                     }
                     //players card goes back in deck, given new card
-                    var card = p.Cards.First(x => x.Name == cardUsed);
-                    Cards.Add(card);
-                    p.Cards.Remove(card);
-                    Cards.Shuffle();
-                    Cards.Shuffle();
-                    card = Cards.First();
-                    Cards.Remove(card);
-                    p.Cards.Add(card);
-                    Send($"You have lost your {cardUsed}.", p.Id, newMsg: true);
+                    try
+                    {
+                        var card = p.Cards.First(x => x.Name == cardUsed);
+                        Cards.Add(card);
+                        p.Cards.Remove(card);
+                        Cards.Shuffle();
+                        Cards.Shuffle();
+                        card = Cards.First();
+                        Cards.Remove(card);
+                        p.Cards.Add(card);
+                        Send($"You have lost your {cardUsed}.", p.Id, newMsg: true);
+                    }
+                    catch (Exception e)
+                    {
+                        Bot.Api.SendTextMessageAsync(Bot.Para, $"Error in blocking.\n{LastMessageSent}\n\n{e.Message}\n{p.Name}\nCard Used: {cardUsed}\nPlayers cards: {p.Cards.Aggregate("", (current, b) => current + ", " + b.Name)}");
+                    }
                     TellCards(p);
+
                     return true;
                 }
                 else
                 {
                     if (p.Cards.Count() == 1)
                     {
-                        
+
                         Send(msg + $"{p.Name.ToBold()}, your bluff was called.  You are out of cards, and therefore out of the game!");
                         PlayerLoseCard(p, p.Cards.First());
                         //Graveyard.Add(p.Cards.First());
@@ -806,7 +814,7 @@ namespace CoupForTelegram
                     ActualTurn = Turn;
                     Turn = p.Id;
                     Send($"Please choose a card to lose", p.Id, menu: menu, newMsg: true, menuTo: p.Id);
-                    
+
                     WaitForChoice(ChoiceType.Card);
                     Turn = ActualTurn;
                     if (CardToLose == null)
@@ -966,7 +974,7 @@ namespace CoupForTelegram
                     var p = Players.FirstOrDefault(x => x.Id == id);
                     var last = p?.LastMessageId ?? LastMessageId;
                     var lastStr = p?.LastMessageSent ?? LastMessageSent;
-                    if (last != 0 & !newMsg &! joinMessage)
+                    if (last != 0 & !newMsg & !joinMessage)
                     {
                         message = lastStr + Environment.NewLine + message;
                         r = Bot.Edit(id, last, message, menu ?? LastMenu).Result;

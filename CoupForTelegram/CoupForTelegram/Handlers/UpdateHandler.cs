@@ -378,6 +378,11 @@ namespace CoupForTelegram.Handlers
                                             p.Block = p.CallBluff = false;
                                             break;
                                         case "block":
+                                            if (p.Block == false)
+                                            {
+                                                Bot.ReplyToCallback(c, "You are not allowed to block", false, true);
+                                                break; 
+                                            }
                                             p.Block = true;
                                             p.CallBluff = false;
                                             break;
