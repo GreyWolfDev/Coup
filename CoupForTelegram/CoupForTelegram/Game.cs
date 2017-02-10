@@ -664,7 +664,7 @@ namespace CoupForTelegram
 
             foreach (var pl in Players)
             {
-                if (canBlock && (pl.Id == t?.Id && a != Action.ForeignAid))
+                if (canBlock && (pl.Id == t?.Id || a == Action.ForeignAid))
                     pl.Block = null;
                 else
                     pl.Block = false;
