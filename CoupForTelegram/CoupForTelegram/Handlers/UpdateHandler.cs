@@ -216,7 +216,7 @@ namespace CoupForTelegram.Handlers
                         g = Program.Games.FirstOrDefault(x => x.Players.Any(p => p.Id == m.From.Id));
                         var rem = g?.RemovePlayer(m.From);
                         if (rem == 1)
-                            Bot.Api.SendTextMessageAsync(m.From.Id, $"You have been remove from game {g.GameId}");
+                            Bot.Api.SendTextMessageAsync(m.From.Id, $"You have been removed from game {g.GameId}");
                         break;
 
                     case "test":

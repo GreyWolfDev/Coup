@@ -820,7 +820,7 @@ namespace CoupForTelegram
                     if (CardToLose == null)
                     {
                         card = p.Cards.First();
-                        Send($"I chose for you, you lost {card}", p.Id);
+                        Send($"I chose for you, you lost {card.Name.ToBold()}", p.Id);
                     }
                     else
                         card = p.Cards.FirstOrDefault(x => x.Name == CardToLose);
@@ -857,9 +857,9 @@ namespace CoupForTelegram
             ActualTurn = Turn;
             Turn = id;
             var choices = new List<InlineKeyboardButton>();
+            choices.Add(new InlineKeyboardButton($"Allow ({allowed})", $"bluff|allow|{GameId}"));
             if (canBluff)
                 choices.Add(new InlineKeyboardButton("Call Bluff", $"bluff|call|{GameId}"));
-            choices.Add(new InlineKeyboardButton($"Allow ({allowed})", $"bluff|allow|{GameId}"));
             if (canBlock)
                 choices.Add(new InlineKeyboardButton("Block", $"bluff|block|{GameId}"));
             return new InlineKeyboardMarkup(choices.ToArray());
