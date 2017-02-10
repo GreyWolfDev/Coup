@@ -167,13 +167,13 @@ namespace CoupForTelegram.Handlers
                         {
                             Bot.Maintenance = true;
                             var msg = "We've had to kill the game for a moment to patch a critical issue.  Please use /newgame in a moment to start a new game.\nSorry for the inconvenience.";
-                            foreach (var g in Program.Games)
+                            foreach (var game in Program.Games)
                             {
-                                if (g.IsGroup)
-                                    Bot.SendAsync(msg, g.ChatId);
+                                if (game.IsGroup)
+                                    Bot.SendAsync(msg, game.ChatId);
                                 else
                                 {
-                                    foreach (var p in g.Players)
+                                    foreach (var p in game.Players)
                                     {
                                         Bot.SendAsync(msg, p.Id);
                                         Thread.Sleep(500);
