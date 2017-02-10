@@ -686,6 +686,18 @@ namespace CoupForTelegram
             bluffer = Players.FirstOrDefault(x => x.CallBluff == true);
             if (canBlock)
                 blocker = Players.FirstOrDefault(x => x.Block == true);
+
+            var isBluff = false;
+            if (a.Equals(Action.BlockSteal) || a.Equals(Action.Steal))
+            {
+                //check the cardUsed
+                isBluff = (p.Cards.All(x => x.Name != cardUsed));
+            }
+            else
+            {
+                isBluff = !PlayerCanDoAction(a, p);
+            }
+
             if (blocker != null)
             {
                 foreach (var pl in Players)
@@ -718,13 +730,13 @@ namespace CoupForTelegram
                 LastMenu = null;
                 //fun time
                 var msg = $"{bluffer.Name} has chosen to call a bluff.\n";
-                //check that the blocker has a duke
-                if (PlayerCanDoAction(a, p))
+                
+                //if stealing, simply checking is not good enough... 
+                if (!isBluff)
                 {
                     //player has a card!
                     if (bluffer.Cards.Count() == 1)
                     {
-
                         Send($"{bluffer.Name.ToBold()}, {p.Name.ToBold()} had {cardUsed.ToBold()}.  You are out of cards, and therefore out of the game!");
                         PlayerLoseCard(bluffer, bluffer.Cards.First());
                         //Graveyard.Add(bluffer.Cards.First());
@@ -779,7 +791,7 @@ namespace CoupForTelegram
             }
             else
             {
-                if (!PlayerCanDoAction(a, p))
+                if (isBluff)
                 {
                     //was a successful bluff
                     DBAddBluff(p, cardUsed);
