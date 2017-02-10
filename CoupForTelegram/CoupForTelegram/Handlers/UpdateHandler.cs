@@ -162,6 +162,30 @@ namespace CoupForTelegram.Handlers
                             Bot.SendAsync("Maintenance mode enabled, no new games", m.Chat.Id);
                         }
                         break;
+                    case "shutdown":
+                        if (m.From.Id == Bot.Para)
+                        {
+                            Bot.Maintenance = true;
+                            var msg = "We've had to kill the game for a moment to patch a critical issue.  Please use /newgame in a moment to start a new game.\nSorry for the inconvenience.";
+                            foreach (var g in Program.Games)
+                            {
+                                if (g.IsGroup)
+                                    Bot.SendAsync(msg, g.ChatId);
+                                else
+                                {
+                                    foreach (var p in g.Players)
+                                    {
+                                        Bot.SendAsync(msg, p.Id);
+                                        Thread.Sleep(500);
+                                    }
+                                }
+                                Thread.Sleep(500);
+                            }
+                            Bot.SendAsync("Bot killed", m.Chat.Id);
+                            Thread.Sleep(1000);
+                            Environment.Exit(0);
+                        }
+                        break;
                     case "newgame":
                         if (Bot.Maintenance)
                         {
