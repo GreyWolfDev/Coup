@@ -96,6 +96,7 @@ namespace CoupForTelegram
 
         public int AddPlayer(User u)
         {
+            if (State != GameState.Joining) return 2;
             if (Players.Count > 5)
             {
                 return 2; //game is full
