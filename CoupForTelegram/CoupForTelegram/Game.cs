@@ -992,19 +992,22 @@ namespace CoupForTelegram
                         message = lastStr + Environment.NewLine + message;
                         r = Bot.Edit(id, last, message, menu ?? LastMenu).Result;
                     }
-                    else if ((IsGroup || last == 0) && joinMessage)
+                    else if (joinMessage)
                     {
+                        message = Players.Aggregate(message, (c, v) => c + v.GetName() + " has joined\n");
                         if (IsGroup)
                         {
                             LastMessageSent = "";
-                            message = Players.Aggregate(message, (c, v) => c + v.GetName() + " has joined\n");
                             r = Bot.Edit(ChatId, last, message, LastMenu).Result;
                         }
-                        else
+                        else if (last == 0)
                         {
                             p.LastMessageSent = "";
-                            message = Players.Aggregate(message, (c, v) => c + v.GetName() + " has joined\n");
                             r = Bot.SendAsync(message, id, customMenu: menu ?? LastMenu).Result;
+                        }
+                        else if (last != 0)
+                        {
+                            r = Bot.Edit(id, last, message, customMenu: menu ?? LastMenu).Result;
                         }
                     }
                     else
