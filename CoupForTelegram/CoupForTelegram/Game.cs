@@ -464,10 +464,14 @@ namespace CoupForTelegram
                                 }
                                 break;
                             case Action.Concede:
+                                LastMenu = null;
+                                Send($"{p.Name} has chosen to concede the game, and is out!\n");
+                                if (p.Cards.Count() == 1)
+                                    Send($"{p.Name}'s card was {p.Cards.First().Name}. It is now in the graveyard.");
+                                else
+                                    Send($"{p.Name}'s cards were {p.Cards.First().Name} and {p.Cards.Last().Name}. They are now in the graveyard.");
                                 Graveyard.AddRange(p.Cards);
                                 p.Cards.Clear();
-                                LastMenu = null;
-                                Send($"{p.Name} has chosen to concede the game, and is out!");
                                 break;
                             default:
                                 LastMenu = null;
@@ -476,9 +480,13 @@ namespace CoupForTelegram
                                 if (p.AfkCount >= 2)
                                 {
                                     //out!
+                                    Send($"{p.Name} is AFK, and is out!");
+                                    if (p.Cards.Count() == 1)
+                                        Send($"{p.Name}'s card was {p.Cards.First().Name}. It is now in the graveyard.");
+                                    else
+                                        Send($"{p.Name}'s cards were {p.Cards.First().Name} and {p.Cards.Last().Name}. They are now in the graveyard.");
                                     Graveyard.AddRange(p.Cards);
                                     p.Cards.Clear();
-                                    Send($"{p.Name} is AFK, and is out!");
                                 }
                                 break;
                         }
