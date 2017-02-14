@@ -363,6 +363,7 @@ namespace CoupForTelegram
                                     }
                                     else
                                     {
+                                        LastMenu = null;
                                         Send($"{p.Name.ToBold()} was not blocked! {target.Name.ToBold()} please choose a card to lose.");
                                         PlayerLoseCard(target);
                                     }
@@ -971,11 +972,10 @@ namespace CoupForTelegram
                 Message r = null;
                 try
                 {
-
                     var p = Players.FirstOrDefault(x => x.Id == id);
                     var last = p?.LastMessageId ?? LastMessageId;
                     var lastStr = p?.LastMessageSent ?? LastMessageSent;
-                    if (last != 0 & !newMsg & !joinMessage)
+                    if (last != 0 && !newMsg && !joinMessage)
                     {
                         message = lastStr + Environment.NewLine + message;
                         r = Bot.Edit(id, last, message, menu ?? LastMenu).Result;
@@ -1004,7 +1004,7 @@ namespace CoupForTelegram
                         if (!specialMenu)
                             LastMenu = menu;
                     }
-                    if (p != null & !specialMenu)
+                    if (p != null && !specialMenu)
                     {
                         p.LastMessageId = r.MessageId;
                         p.LastMessageSent = message;
