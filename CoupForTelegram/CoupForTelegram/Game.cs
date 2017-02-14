@@ -765,7 +765,7 @@ namespace CoupForTelegram
                         card = Cards.First();
                         Cards.Remove(card);
                         p.Cards.Add(card);
-                        Send($"You have lost your {cardUsed}.", p.Id, newMsg: true);
+                        Send($"Your {cardUsed} has been shuffled into the deck", p.Id, newMsg: true);
                     }
                     catch (Exception e)
                     {
@@ -820,7 +820,7 @@ namespace CoupForTelegram
             {
                 if (p.Cards.Count() == 0)
                 {
-                    Send($"{p.Name.ToBold()} is out of cards, so out of the game!");
+                    Send($"{p.Name.ToBold()} is out of cards, so out of the game!"); // Sending messages here might not be necessary as it is covered outside
                     return;
                 }
                 else if (p.Cards.Count() == 1)
