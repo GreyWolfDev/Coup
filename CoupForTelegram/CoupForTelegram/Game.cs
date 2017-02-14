@@ -282,8 +282,9 @@ namespace CoupForTelegram
                                 }
                                 break;
                             case Action.Coup:
+                                if (p.Coins < 10) //else, we have already sent the message "...must Coup someone."
+                                    Send($"{p.Name.ToBold()} has chosen to Coup.");
                                 p.Coins -= 7;
-                                Send($"{p.Name.ToBold()} has chosen to Coup.");
                                 choices = Players.Where(x => x.Id != p.Id && x.Cards.Count() > 0);
                                 if (choices.Count() == 1)
                                     target = choices.First();
@@ -299,7 +300,7 @@ namespace CoupForTelegram
                                 {
                                     LastMenu = null;
                                     Send($"{p.Name.ToBold()} did not choose in time, and has lost 7 coins");
-                                    Send("Times up!", p.Id, menuTo: p.Id);
+                                    Send("Time's up!", p.Id, menuTo: p.Id);
                                     break;
                                 }
 
@@ -309,11 +310,11 @@ namespace CoupForTelegram
                                     //Graveyard.Add(target.Cards.First());
                                     target.Cards.Clear();
                                     LastMenu = null;
-                                    Send($"{target.Name.ToBold()}, you have been couped.  You are out of cards, and therefore out of the game!");
+                                    Send($"{target.Name.ToBold()}, you have been couped. You are out of cards, and therefore out of the game!");
                                 }
                                 else
                                 {
-                                    Send($"{p.Name.ToBold()} has chosen to Coup {target.Name.ToBold()}!  {target.Name.ToBold()} please choose a card to lose.");
+                                    Send($"{p.Name.ToBold()} has chosen to Coup {target.Name.ToBold()}! {target.Name.ToBold()} please choose a card to lose.");
                                     PlayerLoseCard(target);
                                 }
                                 break;
@@ -344,7 +345,7 @@ namespace CoupForTelegram
                                 if (target == null)
                                 {
                                     LastMenu = null;
-                                    Send("Times up!", p.Id, menuTo: p.Id);
+                                    Send("Time's up!", p.Id, menuTo: p.Id);
                                     Send($"{p.Name.ToBold()} did not choose in time, and has lost 3 coins!");
                                     break;
 
@@ -362,7 +363,7 @@ namespace CoupForTelegram
                                     }
                                     else
                                     {
-                                        Send($"{p.Name.ToBold()} was not blocked!  {target.Name.ToBold()} please choose a card to lose.");
+                                        Send($"{p.Name.ToBold()} was not blocked! {target.Name.ToBold()} please choose a card to lose.");
                                         PlayerLoseCard(target);
                                     }
                                 }
@@ -447,7 +448,7 @@ namespace CoupForTelegram
                                 if (target == null)
                                 {
                                     LastMenu = null;
-                                    Send("Times up!", p.Id, menuTo: p.Id);
+                                    Send("Time's up!", p.Id, menuTo: p.Id);
                                     Send($"{p.Name.ToBold()} did not choose in time");
                                     break;
                                 }
@@ -709,7 +710,7 @@ namespace CoupForTelegram
                     var menu = new InlineKeyboardMarkup(new[] { "🛡 Captain", "👳 Ambassador" }.Select(x => new InlineKeyboardButton(x, $"card|{GameId}|{x}")).ToArray());
                     ActualTurn = Turn;
                     Turn = blocker.Id;
-                    Send($"{blocker.Name.ToBold()} has chosen to block.  Please choose which card you are blocking with", menu: menu);
+                    Send($"{blocker.Name.ToBold()} has chosen to block. Please choose which card you are blocking with", menu: menu);
                     WaitForChoice(ChoiceType.Card);
                     Turn = ActualTurn;
                     cardUsed = CardToLose;
