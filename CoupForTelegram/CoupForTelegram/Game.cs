@@ -310,6 +310,7 @@ namespace CoupForTelegram
                                     target.Cards.Clear();
                                     LastMenu = null;
                                     Send($"{target.Name.ToBold()}, you have been couped.  You are out of cards, and therefore out of the game!");
+                                    RemovePlayerAtLoss(p);
                                 }
                                 else
                                 {
@@ -359,6 +360,7 @@ namespace CoupForTelegram
                                         PlayerLoseCard(target, target.Cards.First());
                                         //Graveyard.Add(target.Cards.First());
                                         target.Cards.Clear();
+                                        RemovePlayerAtLoss(p);
                                     }
                                     else
                                     {
@@ -467,6 +469,7 @@ namespace CoupForTelegram
                                 p.Cards.Clear();
                                 LastMenu = null;
                                 Send($"{p.Name} has chosen to concede the game, and is out!");
+                                RemovePlayerAtLoss(p);
                                 break;
                             default:
                                 LastMenu = null;
@@ -478,6 +481,7 @@ namespace CoupForTelegram
                                     Graveyard.AddRange(p.Cards);
                                     p.Cards.Clear();
                                     Send($"{p.Name} is AFK, and is out!");
+                                    RemovePlayerAtLoss(p);
                                 }
                                 break;
                         }
@@ -742,6 +746,7 @@ namespace CoupForTelegram
                         PlayerLoseCard(bluffer, bluffer.Cards.First());
                         //Graveyard.Add(bluffer.Cards.First());
                         bluffer.Cards.Clear();
+                        RemovePlayerAtLoss(p);
                     }
                     else
                     {
@@ -779,6 +784,7 @@ namespace CoupForTelegram
                         PlayerLoseCard(p, p.Cards.First());
                         //Graveyard.Add(p.Cards.First());
                         p.Cards.Clear();
+                        RemovePlayerAtLoss(p);
                     }
                     else
                     {
@@ -801,6 +807,10 @@ namespace CoupForTelegram
             }
         }
 
+        private void RemovePlayerAtLoss(CPlayer p)
+        {
+            Players.Remove(p)
+        }
 
 
         private void PlayerLoseCard(CPlayer p, Card card = null)
