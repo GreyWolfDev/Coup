@@ -140,7 +140,7 @@ namespace CoupForTelegram
         {
             if (State == GameState.Joining)
             {
-                Players.RemoveAll(x => x.Id == u.Id);
+                Players.RemoveAll(x => x.TeleUser.Id == u.Id);
                 if (Players.Count() == 0)
                 {
                     State = GameState.Ended;
