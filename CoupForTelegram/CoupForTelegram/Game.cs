@@ -396,11 +396,13 @@ namespace CoupForTelegram
                                         TellCards(p);
                                         break;
                                     }
-                                    var card2 = "";
-
-                                    newCards.Remove(newCards.First(x => x.Name == CardToLose));
                                     var card1 = CardToLose;
+                                    newCards.Remove(newCards.First(x => x.Name == card1));
+                                    var newCard = Cards.First(x => x.Name == card1);
+                                    Cards.Remove(newCard);
+                                    p.Cards.Add(newCard);
                                     CardToLose = null;
+                                    
                                     if (count == 2)
                                     {
                                         menu = new InlineKeyboardMarkup(new[]
@@ -417,18 +419,12 @@ namespace CoupForTelegram
                                             TellCards(p);
                                             break;
                                         }
-                                        card2 = CardToLose;
-                                        CardToLose = null;
+                                        var card2 = CardToLose;
                                         newCards.Remove(newCards.First(x => x.Name == card2));
-                                    }
-                                    var newCard = Cards.First(x => x.Name == card1);
-                                    Cards.Remove(newCard);
-                                    p.Cards.Add(newCard);
-                                    if (count == 2)
-                                    {
                                         newCard = Cards.First(x => x.Name == card2);
                                         Cards.Remove(newCard);
                                         p.Cards.Add(newCard);
+                                        CardToLose = null;
                                     }
                                     Cards.Shuffle();
                                     TellCards(p);
