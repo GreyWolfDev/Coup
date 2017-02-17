@@ -809,7 +809,7 @@ namespace CoupForTelegram
 
         private void RemovePlayerAtLoss(CPlayer p)
         {
-            Players.Remove(p)
+            Players.Remove(p);
         }
 
 
