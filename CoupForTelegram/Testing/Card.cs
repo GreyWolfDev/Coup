@@ -1,8 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Collections.Generic;
 
 namespace Testing
 {
@@ -70,7 +66,6 @@ namespace Testing
             var result = new List<Card> { new Duke(), new Duke(), new Duke(), new Contessa(), new Contessa(), new Contessa(),
                 new Captain(), new Captain(), new Captain(), new Ambassador(), new Ambassador(), new Ambassador(),
                 new Assassin(), new Assassin(), new Assassin()};
-            result.Shuffle();
             result.Shuffle();
             return result;
         }

@@ -2,11 +2,8 @@
 using CoupForTelegram.Models;
 using Database;
 using System;
-using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading;
-using System.Threading.Tasks;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.ReplyMarkups;
 #pragma warning disable CS4014 // Because this call is not awaited, execution of the current method continues before the call is completed
@@ -82,7 +79,8 @@ namespace CoupForTelegram.Handlers
                             var gps = p.GamePlayers.ToList();
                             stats += $"Games played: {gps.Count()}\n" +
                                 $"Games won: {gps.Count(x => x.Won)}\n" +
-                                $"Checks cards on turn: {gps.Average(x => x.LookedAtCardsTurn)}\n" +
+                                $"Win rate: {Math.Round(100 * ((double)(gps.Count(x => x.Won))) / gps.Count(), 5)}%\n" +
+                                $"Checks cards on turn: {Math.Round((double)(gps.Average(x => x.LookedAtCardsTurn)), 5)}\n" +
                                 $"Total coins collected: {gps.Sum(x => x.CoinsCollected)}\n" +
                                 $"Total coins stolen: {gps.Sum(x => x.CoinsStolen)}\n" +
                                 $"Successful blocks: {gps.Sum(x => x.ActionsBlocked)}\n" +

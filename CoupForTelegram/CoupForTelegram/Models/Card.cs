@@ -72,7 +72,6 @@ namespace CoupForTelegram.Models
                 new Captain(), new Captain(), new Captain(), new Ambassador(), new Ambassador(), new Ambassador(),
                 new Assassin(), new Assassin(), new Assassin()};
             result.Shuffle();
-            result.Shuffle();
             return result;
         }
     }

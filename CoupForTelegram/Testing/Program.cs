@@ -1,8 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Testing
 {
@@ -44,7 +42,6 @@ namespace Testing
             var old = card.Name;
             Cards.Add(card);
             p1.Remove(card);
-            Cards.Shuffle();
             Cards.Shuffle();
             card = Cards.First();
             Cards.Remove(card);

@@ -165,7 +165,6 @@ namespace CoupForTelegram
             Program.GamesPlayed++;
             State = GameState.Initializing;
             Players.Shuffle();
-            Players.Shuffle();
             //create db entry for game
             using (var db = new CoupContext())
             {
@@ -360,7 +359,7 @@ namespace CoupForTelegram
                                         //Graveyard.Add(target.Cards.First());
                                         target.Cards.Clear();
                                     }
-                                    else
+                                    else if (target.Cards.Count() > 1)
                                     {
                                         Send($"{p.Name.ToBold()} was not blocked!  {target.Name.ToBold()} please choose a card to lose.");
                                         PlayerLoseCard(target);
@@ -738,7 +737,7 @@ namespace CoupForTelegram
                     //player has a card!
                     if (bluffer.Cards.Count() == 1)
                     {
-                        Send($"{bluffer.Name.ToBold()}, {p.Name.ToBold()} had {cardUsed.ToBold()}.  You are out of cards, and therefore out of the game!");
+                        Send(msg + $"{bluffer.Name.ToBold()}, {p.Name.ToBold()} had {cardUsed.ToBold()}.  You are out of cards, and therefore out of the game!");
                         PlayerLoseCard(bluffer, bluffer.Cards.First());
                         //Graveyard.Add(bluffer.Cards.First());
                         bluffer.Cards.Clear();
@@ -755,7 +754,6 @@ namespace CoupForTelegram
                         var card = p.Cards.First(x => x.Name == cardUsed);
                         Cards.Add(card);
                         p.Cards.Remove(card);
-                        Cards.Shuffle();
                         Cards.Shuffle();
                         card = Cards.First();
                         Cards.Remove(card);
