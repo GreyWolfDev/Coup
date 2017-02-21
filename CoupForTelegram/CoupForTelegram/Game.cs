@@ -165,7 +165,6 @@ namespace CoupForTelegram
             Program.GamesPlayed++;
             State = GameState.Initializing;
             Players.Shuffle();
-            Players.Shuffle();
             //create db entry for game
             using (var db = new CoupContext())
             {
@@ -755,7 +754,6 @@ namespace CoupForTelegram
                         var card = p.Cards.First(x => x.Name == cardUsed);
                         Cards.Add(card);
                         p.Cards.Remove(card);
-                        Cards.Shuffle();
                         Cards.Shuffle();
                         card = Cards.First();
                         Cards.Remove(card);
